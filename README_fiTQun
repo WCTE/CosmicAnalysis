@@ -1,0 +1,236 @@
+FiTQun v6r0
+================================================================================
+FiTQun is a package for event reconstruction in water Cherenkov detectors,
+running on the outputs of Super-K's SKDETSIM and the
+[WCSim](https://github.com/WCSim/WCSim) water Cherenkov detector simulation.
+
+Setting up FiTQun
+================================================================================
+There are two paths for compiling FiTQun, depending on the local environment.
+
+With Super-K libraries:
+--------------------------------------------------------------------------------
+To set up FiTQun with Super-K libraries, to run on Super-K MC or data, the
+following environment variables should be set: `SKOFL_ROOT` and `ATMPD_ROOT`.
+These variables should point to working installations of both packages.
+
+To compile, set the environment variable `FITQUN_ROOT` to point at the root
+directory of FiTQun and run `make` in `$FITQUN_ROOT`. This step should produce
+the executable `runfiTQun`.
+
+FiTQun requires a few files that contain the "tunes" to run on a specific
+detector configuration. To download the files relevant for Super-K
+reconstruction, run `source sourceme` in `$FITQUN_ROOT`. After this, the
+`${FITQUN_ROOT}/const/` directory should be populated.
+
+With WCSim libraries:
+--------------------------------------------------------------------------------
+To compile FiTQun with WCSim libraries, set the environment variable
+`WCSIM_BUILD_DIR` to point to an existing installation of WCSim.
+
+Then, set `FITQUN_ROOT` to point at the root directory of FiTQun and run `make`
+in `$FITQUN_ROOT`. This step should produce the executable `runfiTQunWC`.
+
+FiTQun requires a few files that contain the "tunes" to run on a specific
+detector configuration. Two sets of tunes are available for detectors simulated
+with WCSim. In `$FITQUN_ROOT`, run `source sourceme_forHK` to download the tunes
+relevant for the Hyper-K configurations and/or `source sourceme_forNuPRISM` to
+download the relevant tunes for the NuPRISM/E61 configurations.
+
+Running FiTQun
+================================================================================
+To process events with FiTQun, run `./runfiTQun` or `./runfiTQunWC` from
+`$FITQUN_ROOT`. The runtime options are:
+```
+Usage: ./runfiTQunWC [options] [input-file] ...
+
+Options:
+    -l <file>         Set the name of an event list file.
+    -n <cnt>          Only read <cnt> events
+    -o <file>         Set the name of an output zbs file.
+    -p <file>         Set the name of a fiTQun parameter-override file
+    -a <tree1:tree2>     or
+    --copy <tree1:tree2> Copy tree1 and tree2 from the input file to the output file.
+                         To copy multiple trees list their names separated by colons.
+                         If the argument 'all' is listed then all trees in the file will be copied.
+                         To copy all trees except for those listed put 'nocopy' as the first tree name.  E.g -a nocopy:tree1:tree2 will copy all trees except tree1 and tree2
+    -c <file>         Set the name of a spliTChan parameter-override file
+    -r <file>         Set the name of an output root file.
+    -s <cnt>          Skip <cnt> events
+    -h 0/1            (0)1: (Do not) write debugging histograms to tree
+    -e  or
+    --nosubevents     Turn off sub-event algorithm to pass clusters to fiTQun
+```
+
+If FiTQun was compiled with Super-K libraries, the output can be either a zbs
+file or a ROOT file. The output file format is selected by using either the
+`-o` or `-r` flags to specify the output file name.
+
+A parameters file, `${FITQUN_ROOT}/fiTQun.parameters.dat` controls details of
+the reconstruction algorithm, including which fits should be run and low level
+parameters. More details are given as comments in the parameters file.
+
+By default, FiTQun will load the Super-K detector configuration. To use FiTQun
+on other detector configurations (e.g., simulated with WCSim), the relevant
+parameters override file should be used. These files are placed in
+`${FITQUN_ROOT}/ParameterOverrideFiles/`, and there is one file for each tune
+available. The parameter override files are selected with the `-p` runtime option.
+For example, to run on Hyper-K simulated events:
+`./runfiTQunWC -p ${FITQUN_ROOT}/ParameterOverrideFiles/HyperK.parameters.dat -r MyRootOutput.root MyWCSimFile.root`
+
+FiTQun output
+================================================================================
+The FiTQun output takes the form of flat ROOT TTrees or equivalent zebra
+banks. The following variables are available:
+
+Time-window information
+--------------------------------------------------------------------------------
+```
+fqntwnd/I                               Number of time windows (good clusters) in this event
+fqtwnd_iclstr[fqntwnd]/I 	        Cluster index of the time window(corresponds to cluster_ncand)
+fqtwnd_npeak[fqntwnd]/I 	        Number of peaks(sub-events) in the time window
+fqtwnd_prftt0[fqntwnd]/F 	        Pre-fitter vertex time
+fqtwnd_prftpos[fqntwnd][3]/F 	        Pre-fitter vertex position
+fqtwnd[fqntwnd][2]/F 	                Time window start/end time
+fqtwnd_peakt0[fqntwnd][10]/F 	        Time of each sub-event in the time window
+fqtwnd_peakiness[fqntwnd][10]/F 	Vertex goodness parameter evaluated at the peak position
+```
+
+Sub-event information
+--------------------------------------------------------------------------------
+```
+fqnse/I                                 Total number of subevents in the event
+fqitwnd[fqnse]/I 	                Index of the time window to which the subevent belongs
+fqipeak[fqnse]/I 	                Peak index within the time window
+fqnhitpmt[fqnse]/I 	                Number of hits in each subevent
+fqtotq[fqnse]/F 	                Total charge in each subevent
+fq0rtotmu[fqnse]/F 	                Total predicted charge for the 0-ring hypothesis in each subevent - these variables are the result of evaluating the likelihood function with a particle that is below Cherenkov threshold.
+fq0rnll[fqnse]/F 	                -log(L) value for the 0-ring hypothesis in each subevent
+fqn50[fqnse]/I 	                        n50 - In the TOF-corrected hit time distribution, number of hits within the 50ns time window centred at vertex time(1R electron fit vertex is used)
+fqq50[fqnse]/F 	                        q50 - Total charge of hits included in n50 above
+```
+
+1-Ring fits
+--------------------------------------------------------------------------------
+```
+- These variables are the result of the 1-ring fits. The first index is the subevent (1-ring fits are run on all subevents). The second
+  index is the particle-hypothesis index (same as apfit):
+  0 = GAMMA, 1 = ELECTRON, 2 = MUON, 3 = PION, 4 = KAON, 5 = PROTON,  6 = CONE GENERATOR
+  Currently, only the electron, muon, and pion (the upstream pion segement) hypotheses are implemented.
+
+fq1rpcflg[fqnse][7]/I 	                Flag to indicate whether fiTQun believes the particle is exiting the ID(<0 if MINUIT did not converge)
+fq1rmom[fqnse][7]/F 	                Fit momentum
+fq1rt0[fqnse][7]/F 	                Fit particle creation time
+fq1rtotmu[fqnse][7]/F 	                Best-fit total predicted charge
+fq1rnll[fqnse][7]/F 	                Best-fit -lnL
+fq1rpos[fqnse][7][3]/F 	                Fit vertex (0=X, 1=Y, 2=Z)
+fq1rdir[fqnse][7][3]/F  	        Fit direction (0=X, 1=Y, 2=Z)
+fq1rdconv[fqnse][7]/F 	                Fit conversion length (always 0 for 1R fits)
+fq1reloss[fqnse][7]/F 	                Energy lost in the upstream track segment before the hadronic interaction(for upstream tracks only)
+```
+
+Pi0 fits
+--------------------------------------------------------------------------------
+```
+- Pi0 fits are only run on the first subevent. Index 0 gives the standard, unconstrained pi0 fit. (Index 1 is not filled currently)
+
+fqpi0pcflg[2]/I 	                (PCflg for photon 1) + 2*(PCflg for photon 2)
+fqpi0mom1[2]/F  	                Fit momentum of first photon
+fqpi0mom2[2]/F   	                Fit momentum of second photon
+fqpi0momtot[2]/F  	                Fit momentum of the pi0
+fqpi0dconv1[2]/F 	                Fit conversion length for the first photon
+fqpi0dconv2[2]/F 	                Fit conversion length for the second photon
+fqpi0t0[2]/F 	                        Fit pi0 creation time
+fqpi0totmu[2]/F 	                Best fit total predicted charge
+fqpi0nll[2]/F  	                        Best fit -log(Likelihood)
+fqpi0mass[2]/F  	                Fit pi0 mass (always 134.9766 for constrained mass fit)
+fqpi0photangle[2]/F 	                Fit opening angle between the photons
+fqpi0pos[2][3]/F 	                Fit vertex position
+fqpi0dir1[2][3]/F 	                Fit direction of the first photon
+fqpi0dir2[2][3]/F  	                Fit direction of the second photon
+fqpi0dirtot[2][3]/F   	                Fit direction of the pi0
+```
+
+Multi-Ring Fits
+--------------------------------------------------------------------------------
+```
+- These are the results of the Multi-Ring(MR) fits. The number of executed multi-ring fits depends on the event topology,
+and the first index specifies different fit results.(Index 0 is the best-fit result.) 
+Each fit result is assigned a unique fit ID which tells the type of the fit(see fiTQun.cc for more details):
+
+  8-digit ID "N0...ZYX" :
+    These are the raw MR fitter output, in which a ring is either an electron or a pi+.
+    The most significant digit "N" is the number of rings(1-6), and X, Y and Z are the particle type(as in 1R fit, "1" for e, "3" for pi+)
+    of the 1st, 2nd and 3rd ring respectively.
+    Negative fit ID indicates that the ring which is newly added in the fit is determined as a fake ring by the fake ring reduction algorithm.
+
+  9-digit ID "1N0...ZYX" :
+    These are the results after the fake ring reduction is applied on the raw MR fit results above with ID "N0...ZYX". Rings are re-ordered according to 
+    their visible energy, and one needs refer to the fqmrpid variable for the particle type of each ring, not the fit ID.
+
+  9-digit ID "2N0...ZYX" :
+    These are the results after the fake ring merging and sequential re-fitting are applied on the post-reduction result "1N0...ZYX".
+    PID of a ring can change after the re-fit, and muon hypothesis is also applied on the most energetic ring.
+
+  9-digit ID "3N0...ZYX" :
+    These are the results after simultaneously fitting the longitudinal vertex position and the visible energy of all rings,
+    on the post-refit result "2N0...ZYX".(Still experimental)
+
+  9-digit ID "8NX000000" :
+    When the best-fit hypothesis has more than one ring, the negative log-likelihood values for each ring (N) and PID hypothesis (X) can be obtained using these results. For example, to compare the likelihood for the pion and electron hypotheses of the second ring, the IDs "813000000" and "811000000" could be used.
+
+fqnmrfit/I 	                        Number of MR fit results that are available
+fqmrifit[fqnmrfit]/I 	                Fit ID of each MR fit result
+fqmrnring[fqnmrfit]/I 	                Number of rings for this fit [1-6]
+fqmrpcflg[fqnmrfit]/I 	                <0 if MINUIT did not converge during the fit
+fqmrnll[fqnmrfit]/F 	                Best-fit -lnL
+fqmrtotmu[fqnmrfit]/F 	                Best-fit total predicted charge
+fqmrpid[fqnmrfit][6]/I 	                Particle type index for each ring in this fit (Same convention as in 1R fit)
+fqmrmom[fqnmrfit][6]/F 	                Fit momentum of each ring
+fqmrdconv[fqnmrfit][6]/F 	        Fit conversion length of each ring(always "0" in default mode)
+fqmreloss[fqnmrfit][6]/F 	        Energy lost in the upstream track segment(for upstream tracks only)
+fqmrt0[fqnmrfit][6]/F 	                Fit creation time of each ring
+fqmrpos[fqnmrfit][6][3]/F 	        Fit vertex position of each ring
+fqmrdir[fqnmrfit][6][3]/F 	        Fit direction of each ring
+```
+
+Multi-Segment Muon Fits
+--------------------------------------------------------------------------------
+```
+- These are the results of the Multi-Segment(M-S) muon fits. By default, the stand-alone M-S fit(first index="0") is applied on every event,
+and if the most energetic ring in the best-fit MR fit is a muon, the muon track is re-fitted as a M-S track.(first index="1")
+
+fqmsnfit/I 	                        Number of Multi-Segment fit results that are available
+fqmspcflg[fqmsnfit]/I 	                <0 if MINUIT did not converge during the fit
+fqmsnseg[fqmsnfit]/I 	                Number of track segments in the fit
+fqmspid[fqmsnfit]/I 	                Particle type of the M-S track (always "2")
+fqmsifit[fqmsnfit]/I 	                Fit ID of the MR fit that seeded this fit("1" for the stand-alone M-S fit)
+fqmsimer[fqmsnfit]/I 	                Index of the ring to which the M-S track corresponds in the seeding MR fit
+fqmstotmu[fqmsnfit]/F 	                Best-fit total predicted charge
+fqmsnll[fqmsnfit]/F 	                Best-fit -lnL
+fqmsmom[fqmsnfit][20]/F 	        Fit initial momentum of each segment
+fqmseloss[fqmsnfit][20]/F 	        Energy lost in each segment
+fqmst0[fqmsnfit][20]/F 	                Fit creation time of each segment
+fqmspos[fqmsnfit][20][3]/F 	        Fit vertex position of each segment
+fqmsdir[fqmsnfit][20][3]/F 	        Fit direction of each segment
+```
+
+Proton decay: p -> K+ nu; K+ -> mu+ nu; "prompt gamma method" Fit.
+--------------------------------------------------------------------------------
+```
+- These are the results of the PDK_MuGamma fit, dedicated to proton decay
+searches. Although there are two available fit results for each quantity, only
+the first is used (e.g. fqpmgmom1[0]).
+
+fqpmgpcflg[2]/I                         (PCflg for muon) + 2*(PCflg for gamma)
+fqpmgmom1[2]/F                          Best-fit muon momentum
+fqpmgmom2[2]/F                          Best-fit gamma momentum
+fqpmgt01[2]/F                           Best-fit muon time
+fqpmgt02[2]/F                           Best-fit gamma time
+fqpmgtotmu[2]/F                         Best-fit total predicted charge
+fqpmgnll[2]/F                           Best-fit negative log-likelihood
+fqpmgpos1[2][3]/F                       Best-fit muon position
+fqpmgpos2[2][3]/F                       Best-fit gamma position
+fqpmgdir1[2][3]/F                       Best-fit muon direction
+fqpmgdir2[2][3]/F                       Best-fit gamma direction
+```
