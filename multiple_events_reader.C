@@ -28,6 +28,7 @@ int multiple_events_reader(const char* filename="/work/kmtsui/wcte/cosmic/hk_flu
 
     for (int i=0; i<nEvent; i++) {
 
+        //progress
         std::cout << "\rReading event " << i << "/" << nEvent;
 
         //finding the main track of this event
