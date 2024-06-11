@@ -1,6 +1,6 @@
 //max_r and max_z are obtained from find_max_r_and_z.C
-#define max_r 190.446
-#define max_z 156.013
+#define max_r 156.763
+#define max_z 137.928
 
 R__LOAD_LIBRARY(/opt/WCSim/build/install/lib/libWCSimRoot.so)
 
