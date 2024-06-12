@@ -1,6 +1,6 @@
-//max_r and max_z are obtained from find_max_r_and_z.C
-#define max_r 156.763
-#define max_z 137.928
+//max_r and max_z is taken to be the outest boundary of the tank
+#define max_r 162.67
+#define max_z 143.542
 
 R__LOAD_LIBRARY(/opt/WCSim/build/install/lib/libWCSimRoot.so)
 
