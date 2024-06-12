@@ -21,8 +21,22 @@ root -l -b -q read_main_track.C\(iEvent,\"filename\"\)
 ```
 
 
-## find_max_r_and_z.C
-(Jimmy) Read the geometry tree of any event and find the max_z and max_r.
+## multiple_events_reader.C
+(Jimmy) Read multiple WCSim root file and print out the exit and entrance position, as well as the total charge against energy plot
 ```
-root -l -b -q read_main_track.C\(\"filename\"\)
+root -l -b -q multiple_events_reader.C\(\"filename\"\)
+```
+
+
+## fitQun_analysis.C
+(Jimmy) Read multiple fitQun files and print out the extrapolated exit and entrance position form the reconstructed vertex
+```
+root -l -b -q fitQun_analysis.C\(\"filename\"\)
+```
+
+
+## WCSim_fitQun.c
+(jimmy) Read multiple WCSim and fitQun files and print out their diffenerce
+```
+root -l -b -q WCSim_fitQun.c\(\"fname\", \"wname\"\)
 ```
