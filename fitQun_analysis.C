@@ -13,7 +13,6 @@ bool extrapolation(float fq1rpos[2][7][3], float fq1rdir[2][7][3], double entran
 
     //check whether the vertex position is located in the tank
     if ((fabs(z)<Z)&&(r<R)) {
-
         //search for exit point
         if (z_dir>0) {vt = (Z-z)/z_dir;}
         else {vt = (-Z-z)/z_dir;}
@@ -29,7 +28,9 @@ bool extrapolation(float fq1rpos[2][7][3], float fq1rdir[2][7][3], double entran
             exit[2] = z+z_dir*vt;
         }
         //search for entrance point
-        x_dir=-x_dir, y_dir=-y_dir, z_dir=-z_dir;
+        x_dir = -x_dir;
+        y_dir = -y_dir;
+        z_dir = -z_dir;
         if (z_dir>0) {vt = (Z-z)/z_dir;}
         else {vt = (-Z-z)/z_dir;}
         entrance[0] = x+x_dir*vt;
@@ -46,35 +47,30 @@ bool extrapolation(float fq1rpos[2][7][3], float fq1rdir[2][7][3], double entran
         return false;
     }
 
-    //check whether the vertex position is on top/at the bottom of the tank, and perform forward extrapolation
-    if (z_dir>0) {vt = (-Z-z)/z_dir;}
-    else {vt = (Z-z)/z_dir;}
-    double cos_theta;
-    if ((fabs(z)>Z)&&(vt>0)) {
-        entrance[0] = x+x_dir*vt;
-        entrance[1] = y+y_dir*vt;
-        entrance[2] = z+z_dir*vt;
-        if ((entrance[0]*entrance[0]+entrance[1]*entrance[1])>(R*R)) {return true;} //particle didn't touch the tank
-        x = entrance[0];
-        y = entrance[1]; 
-        z = entrance[2]; 
-        r = sqrt(x*x+y*y);
-        cos_theta = -(x_dir*x+y_dir*y)/(r_dir*r);
-        vt = (r/r_dir)*(cos_theta+sqrt(cos_theta*cos_theta+(R*R)/(r*r)-1));
-        exit[0] = x+x_dir*vt;
-        exit[1] = y+y_dir*vt;
-        exit[2] = z+z_dir*vt;
-        return false;
-    }
 
-    //check whether the vertex position is within the tank z coordinate boundary, and perform forward extrapolation
-    cos_theta = -(x_dir*x+y_dir*y)/(r_dir*r);
-    if ((fabs(z)<Z)&&(acos(fabs(cos_theta))<asin(R/r))) {
-        vt = (r/r_dir)*(cos_theta+sqrt(cos_theta*cos_theta+(R*R)/(r*r)-1));
+    if (r>R) {
+        double cos_theta = -(x_dir*x+y_dir*y)/(r_dir*r);
+        if (acos(cos_theta)>asin(R/r)) {return true;}
+        if (z>Z) {
+            if (z_dir>0) {return true;}
+            vt = (z-Z)/z_dir;
+        }
+        if (z<(-Z)) {
+            if (z_dir<0) {return true;}
+            vt = (-Z-z)/z_dir;
+        }
+        if (z_dir>0) {vt = (Z-z)/z_dir;}
+        else {vt = (-Z-z)/z_dir;}
         entrance[0] = x+x_dir*vt;
         entrance[1] = y+y_dir*vt;
         entrance[2] = z+z_dir*vt;
-        if (fabs(entrance[2])>Z) {return true;} //particle didn't touch the tank
+        if ((entrance[0]*entrance[0]+entrance[1]*entrance[1])>(R*R)) {
+            vt = (r/r_dir)*(cos_theta-sqrt(cos_theta*cos_theta+(R*R)/(r*r)-1));
+            entrance[0] = x+x_dir*vt;
+            entrance[1] = y+y_dir*vt;
+            entrance[2] = z+z_dir*vt;
+            if (fabs(entrance[2])>Z) {return true;}
+        }
         x = entrance[0];
         y = entrance[1];
         z = entrance[2];
@@ -83,62 +79,45 @@ bool extrapolation(float fq1rpos[2][7][3], float fq1rdir[2][7][3], double entran
         exit[0] = x+x_dir*vt;
         exit[1] = y+y_dir*vt;
         exit[2] = z+z_dir*vt;
+        //check if the particle passes through the barrel
         if ((exit[0]*exit[0]+exit[1]*exit[1])>(R*R)) {
-            cos_theta = -(x_dir*x+y_dir*y)/(r_dir*R);
-            vt = 2*R*cos_theta/r_dir;
+            cos_theta = -(x_dir*x+y_dir*y)/(r_dir*r);
+            vt = (r/r_dir)*(cos_theta+sqrt(cos_theta*cos_theta+(R*R)/(r*r)-1));
             exit[0] = x+x_dir*vt;
             exit[1] = y+y_dir*vt;
             exit[2] = z+z_dir*vt;
         }
         return false;
     }
-
-    x_dir=-x_dir;
-    y_dir=-y_dir;
-    z_dir=-z_dir;
-    //check whether the vertex position is on top/at the bottom of the tank, and perform backward extrapolation
-    if (z_dir>0) {vt = (-Z-z)/z_dir;}
-    else {vt = (Z-z)/z_dir;}
-    if ((fabs(z)>Z)&&(vt>0)) {
-        exit[0] = x+x_dir*vt; 
-        exit[1] = y+y_dir*vt; 
-        exit[2] = z+z_dir*vt;
-        if ((exit[0]*exit[0]+exit[1]*exit[1])>(R*R)) {return true;} //particle didn't touch the tank
-        x = exit[0]; 
-        y = exit[1]; 
-        z = exit[2]; 
-        r = sqrt(x*x+y*y);
-        cos_theta = -(x_dir*x+y_dir*y)/(r_dir*r);
-        vt = (r/r_dir)*(cos_theta+sqrt(cos_theta*cos_theta+(R*R)/(r*r)-1));
-        entrance[0] = x+x_dir*vt; 
-        entrance[1] = y+y_dir*vt; 
+    
+    if (fabs(z)>Z) {
+        if (z>Z) {
+            if (z_dir>0) {return true;}
+            vt = (z-Z)/z_dir;
+        }
+        if (z<(-Z)) {
+            if (z_dir<0) {return true;}
+            vt = (-Z-z)/z_dir;
+        }
+        entrance[0] = x+x_dir*vt;
+        entrance[1] = y+y_dir*vt;
         entrance[2] = z+z_dir*vt;
-        return false;
-    }
-
-    //check whether the vertex position is within the tank z coordinate boundary, and perform backward extrapolation
-    cos_theta = -(x_dir*x+y_dir*y)/(r_dir*r);
-    if ((fabs(z)<Z)&&(acos(fabs(cos_theta))<asin(R/r))) {
-        vt = (r/r_dir)*(cos_theta+sqrt(cos_theta*cos_theta+(R*R)/(r*r)-1));
-        exit[0] = x+x_dir*vt; 
-        exit[1] = y+y_dir*vt; 
-        exit[2] = z+z_dir*vt;
-        if (fabs(exit[2])>Z) {return true;} //particle didn't touch the tank
-        x = exit[0];
-        y = exit[1];
-        z = exit[2];
+        if ((entrance[0]*entrance[0]+entrance[1]*entrance[1])>(R*R)) {return true;}
+        x = entrance[0];
+        y = entrance[1];
+        z = entrance[2];
         if (z_dir>0) {vt = (Z-z)/z_dir;}
         else {vt = (-Z-z)/z_dir;}
-        entrance[0] = x+x_dir*vt; 
-        entrance[1] = y+y_dir*vt; 
-        entrance[2] = z+z_dir*vt;
+        exit[0] = x+x_dir*vt;
+        exit[1] = y+y_dir*vt;
+        exit[2] = z+z_dir*vt;
         //check if the particle passes through the barrel
-        if ((entrance[0]*entrance[0]+entrance[1]*entrance[1])>(R*R)) {
-            cos_theta = -(x_dir*x+y_dir*y)/(r_dir*R);
-            vt = 2*R*cos_theta/r_dir;
-            entrance[0] = x+x_dir*vt; 
-            entrance[1] = y+y_dir*vt; 
-            entrance[2] = z+z_dir*vt;
+        if ((exit[0]*exit[0]+exit[1]*exit[1])>(R*R)) {
+            double cos_theta = -(x_dir*x+y_dir*y)/(r_dir*r);
+            vt = (r/r_dir)*(cos_theta+sqrt(cos_theta*cos_theta+(R*R)/(r*r)-1));
+            exit[0] = x+x_dir*vt;
+            exit[1] = y+y_dir*vt;
+            exit[2] = z+z_dir*vt;
         }
         return false;
     }
