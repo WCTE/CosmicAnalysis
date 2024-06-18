@@ -6,6 +6,7 @@ Produces event display for a single event.
 ```
 root -l -b -q EventDisplay_SingleEvent.c\(\"file_name\",evt_num\)
 ```
+Example outputs are shown [here](fig/).
 
 ## VertexDistribution.c
 Produces vertex distribution for all events 
