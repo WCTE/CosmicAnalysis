@@ -42,4 +42,14 @@ root -l -b -q fitQun_analysis.C\(\"filename\"\)
 root -l -b -q WCSim_fitQun.c\(\"fname\", \"wname\"\)
 ```
 
+## WCSim_fitQun_preprocess.c
+(jimmy) Read the required data form the WCSim and fitQun root files and store the data in a simpler root file, default file name: WCSim_fitQun_preprocess.root
+```
+root -l -b -q WCSim_fitQun_preprocess.c\(\"fname\", \"wname\"\)
+```
+
 ## s_selection.c
+(jimmy) Read the root file WCSim_fitQun_preprocess.root obtain by WCSim_fitQun_preprocess.c and comparing the result of WCSim simulation and the corresponding fitQun reconstruction. By default, pname = "./WCSim_fitQun_preprocess.root"
+```
+root -l -b -q s_selection.c\(\"pname\"\)
+```
