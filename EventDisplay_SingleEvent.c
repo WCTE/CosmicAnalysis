@@ -91,7 +91,6 @@ void EventDisplay_SingleEvent(const char * fname, int evtID)
 
     double barrelCut = max_z-10;
     TH2D* hist_event_display = new TH2D("Charges","Charges",250,-TMath::Pi()*max_r,TMath::Pi()*max_r,250,-max_z-2*max_r,max_z+2*max_r);
-    TH2D* hist_event_display_time = new TH2D("TIme","Time",250,-TMath::Pi()*max_r,TMath::Pi()*max_r,250,-max_z-2*max_r,max_z+2*max_r);
     std::vector<std::vector<double>> eventDiplayXY;
     for (int i=0;i<nPMTs_type0;i++)
     {
@@ -120,10 +119,9 @@ void EventDisplay_SingleEvent(const char * fname, int evtID)
     }
 
     std::vector<double> pmt_hit(nPMTs_type0,0.);
-    std::vector<double> pmt_time(nPMTs_type0,0.);
+    TH1D* hist_time = new TH1D("DigiTime","DigiTime",1000,-20,80);
     TH1D* hist_timetof = new TH1D("DigiTime-TOF","DigiTime-TOF",1000,-20,40);
     TH1D* hist_timetof_true = new TH1D("TrueTime-TOF","TrueTime-TOF",1000,-10,50);
-    double time_min = 9999;
     for (long int nev=evtID;nev<evtID+1;nev++)
     {
 
@@ -154,9 +152,8 @@ void EventDisplay_SingleEvent(const char * fname, int evtID)
             double time = wcsimrootcherenkovdigihit->GetT()+triggerTime-triggerShift;
 
             pmt_hit[tubeNumber] += peForTube;
-            pmt_time[tubeNumber] = wcsimrootcherenkovdigihit->GetT();
-            if (time_min>pmt_time[tubeNumber]) time_min = pmt_time[tubeNumber];
 
+            hist_time->Fill(time);
             hist_timetof->Fill(time-pmt_tof[tubeNumber],peForTube);
         }
 
@@ -179,14 +176,11 @@ void EventDisplay_SingleEvent(const char * fname, int evtID)
         }
     }
     
-    double time_max = time_min+20;
     for (int i=0;i<nPMTs_type0;i++)
     {
         if (pmt_hit[i]>0)
         {
             hist_event_display->Fill(eventDiplayXY.at(i).at(0),eventDiplayXY.at(i).at(1),pmt_hit[i]);
-            if (pmt_time[i]>=time_min && pmt_time[i]<=time_max) hist_event_display_time->Fill(eventDiplayXY.at(i).at(0),eventDiplayXY.at(i).at(1),pmt_time[i]);
-            std::cout<<"pmt_time = "<<pmt_time[i]<<std::endl;
         }
     }
     TCanvas* c1 = new TCanvas();
@@ -255,14 +249,12 @@ void EventDisplay_SingleEvent(const char * fname, int evtID)
     m2.Draw();
     c1->SaveAs(Form("%sdisplay_%i.pdf",prefix.c_str(),evtID));
 
-    hist_event_display_time->GetZaxis()->SetRangeUser(time_min,time_max);
-    hist_event_display_time->Draw("colz");
-    m1.Draw();
-    m2.Draw();
-    c1->SaveAs(Form("%sdisplay_time_%i.pdf",prefix.c_str(),evtID));
+    hist_time->GetXaxis()->SetTitle("Digi Time (ns)");
+    hist_timetof->GetXaxis()->SetTitle("Digi Time-TOF (ns)");
+    hist_timetof_true->GetXaxis()->SetTitle("Raw Time-TOF (ns)");
 
-    hist_timetof->GetXaxis()->SetTitle("Digi Time (ns)");
-    hist_timetof_true->GetXaxis()->SetTitle("Raw Time (ns)");
+    hist_time->Draw("hist");
+    c1->SaveAs(Form("%stime_%i.pdf",prefix.c_str(),evtID));
 
     hist_timetof->Draw("hist");
     c1->SaveAs(Form("%stimetof_%i.pdf",prefix.c_str(),evtID));

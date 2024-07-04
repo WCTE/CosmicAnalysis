@@ -6,13 +6,14 @@ Produces event display for a single event.
 ```
 root -l -b -q EventDisplay_SingleEvent.c\(\"file_name\",evt_num\)
 ```
+Example outputs are shown [here](fig/EventDisplay_SingleEvent).
 
 ## VertexDistribution.c
-Produces vertex distribution for all events 
+Muon vertices are extrapolated to reach the tank to produced the vertex distribution for all events.
 ```
 root -l -b -q VertexDistribution.c\(\"file_name\"\)
 ```
-
+Example outputs are shown [here](fig/VertexDistribution).
 
 ## read_main_track.C
 (Jimmy) Produces event display for a single event.
@@ -40,3 +41,4 @@ root -l -b -q fitQun_analysis.C\(\"filename\"\)
 ```
 root -l -b -q WCSim_fitQun.c\(\"fname\", \"wname\"\)
 ```
+
