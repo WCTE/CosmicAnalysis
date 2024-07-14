@@ -40,7 +40,7 @@ Read the root file created by "WCSim_fitQun_preprocess.c" and comparing the resu
 It is run by root with the following syntax: root -l -b -q s_selection.c\(\"pname\"\)
 "pname" is the path of the root file created by "WCSim_fitQun_preprocess.c", by default pname="./WCSim_fitQun_preprocess.root".
 
-The code first read the given file event by event. In each event the function selector(), will be called, which the main track will be selected according to the criteria (cut off) specified in the function. Multiple of plots will be created for those events being selected, including
+The code first read the given file event by event. In each event the function selector(), will be called, which the main track will be selected according to the criteria (cut off) specified. There are 5 options determined by the first argument of the function, which are: 1 for top to bottom, 2 for top to bottom with cutoff, 3 for top to barrel, 4 for barrel to bottom, 5 for barrel to barrel. Multiple of plots will be created for those events being selected, including:
 1D histogram: 
     Distance between the entrance points of WCSim and fitQun, "entrance_diff.pdf"
     Distance between the exit points of WCSim and fitQun, "exit_diff.pdf"
