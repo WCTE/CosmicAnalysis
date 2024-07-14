@@ -40,7 +40,7 @@ Read the root file created by "WCSim_fitQun_preprocess.c" and comparing the resu
 It is run by root with the following syntax: root -l -b -q s_selection.c\(\"pname\"\)
 "pname" is the path of the root file created by "WCSim_fitQun_preprocess.c", by default pname="./WCSim_fitQun_preprocess.root".
 
-The code first read the given file event by event. In each event the function selector(), will be called, which the main track will be selected according to the criteria (cut off) specified. There are 5 options determined by the first argument of the function, which are: 1 for top to bottom, 2 for top to bottom with cutoff, 3 for top to barrel, 4 for barrel to bottom, 5 for barrel to barrel. Multiple of plots will be created for those events being selected, including:
+The code first read the given file event by event. In each event the function selector(), will be called, which the main track will be selected according to the criteria (cut off) specified. There are 5 options determined by the first argument of the function, which are: 1 for top to bottom, 2 for top to bottom with cutoff, 3 for top to barrel, 4 for barrel to bottom, 5 for barrel to barrel. Multiple of plots will be created for those events being selected, including
 1D histogram: 
     Distance between the entrance points of WCSim and fitQun, "entrance_diff.pdf"
     Distance between the exit points of WCSim and fitQun, "exit_diff.pdf"
@@ -51,3 +51,16 @@ The code first read the given file event by event. In each event the function se
 2D histogram:
     Total PMT charges against the WCSim travel distance, "QvsTL.pdf"
     Total PMT charges against the fitQun travel distance, "QvsRL.pdf"
+
+## m_selection.c
+Read the root file created by "WCSim_fitQun_preprocess.c" multiple times with different fitQun entrance or exit cutoff and comparing the result of WCSim simulation and the corresponding fitQun reconstruction.
+
+It is run by root with the following syntax: root -l -b -q m_selection.c\(\"pname\"\)
+"pname" is the path of the root file created by "WCSim_fitQun_preprocess.c", by default pname="./WCSim_fitQun_preprocess.root".
+
+The file will be read, by a for loop, by a multiple times determined by the input value of start, end and interval. Noted that (end-start) must be divisible by interval. Within the outter most for loop, the file will be read event by event and the selection() function will be called. Only main track which enters from top and exit through bottom will be selected. There are also two options determined by the first argument of the function, which are: 1 for entrance radius cutoff and 2 for exit radius cutoff. Four 1D histograms will be created for those events being selected, including:
+    Distance between the WCSim and fitQun entrance position, "entrance_diff_mean.pdf"
+    Distance between the WCSim and fitQun exit position, "exit_diff_mean.pdf"
+    Distance between the WCSim and fitQun travel distance in the tank, "dist_diff_mean.pdf"
+    Percentage of event ramaining after cutoff, "percentage.pdf"
+
