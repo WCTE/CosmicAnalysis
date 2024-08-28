@@ -132,7 +132,6 @@ void AngAcceptance(const char* filename="./HitPreprocess.root") {
         THTreeEndPos = THTreeStartPos + THNum;
         for (int j=THTreeStartPos; j<THTreeEndPos; j++) {
             THTree->GetEntry(j);
-            DHTree->GetEntry(DHID);
             double TrueTimeError = WCSimEntranceTime + TruePhoTrack[THPMT][0] - THTime;
             if (TrueTimeError<-1.7599) {continue;}
             if (TruePhoTrack[THPMT][0]!=(-1)) {PMTQ1[THPMT]++;}

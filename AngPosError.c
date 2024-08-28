@@ -157,7 +157,7 @@ void AngPosError(const char* filename="./HitPreprocess.root") {
                         (TruePhoTrack[THPMT][4]-PhoStartPos[2])*(TruePhoTrack[THPMT][4]-PhoStartPos[2])));
                 }
             }
-            if (fitQunPhoTrack[THPMT][0]!=(-1)) {
+            if (fitQunPhoTrack[THPMT][0]!=(-1) && DHID!=(-1)) {
                 DHTree->GetEntry(DHID);
                 double fitQunTimeError = fitQunEntranceTime + fitQunPhoTrack[THPMT][0] - DHTime;
                 if (fitQunTimeError>-2.1492) {
