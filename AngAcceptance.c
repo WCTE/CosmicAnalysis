@@ -4,13 +4,15 @@ R__LOAD_LIBRARY(/opt/WCSim/build/install/lib/libWCSimRoot.so)
 #define max_z 141.5
 #include "function.h"
 
-void AngAcceptance(const char* filename="./HitPreprocess.root") {
+void AngAcceptance(const char* filename="./WCSimfitQunHitPreprocess.root") {
     TFile* File = new TFile(filename, "read");
     if (!File->IsOpen()){
         std::cout << "Error, could not open the preprocess file: " << filename << "\n";
         return;
     }
-    TTree* EventTree = (TTree*)File->Get("EventTree");
+
+    //Refer to code description of WCSimfitQunHitPreprocess.c for details of each branch
+    TTree* EventTree = (TTree*)File->Get("EventTree"); 
     int DHNum, THNum;
     double fitQunVerTime, fitQunPos[3], fitQunDir[3], fitQunEntrance[3], fitQunExit[3], WCSimEntrance[3], WCSimStartPos[3], WCSimDir[3];
     EventTree->SetBranchAddress("DHNum", &DHNum);
@@ -44,7 +46,7 @@ void AngAcceptance(const char* filename="./HitPreprocess.root") {
     GeoTree->SetBranchAddress("PMTPos", PMTPos);
     GeoTree->GetEntry(0);
 
-    //Set up histogram
+    //Set up histogram, details refer to Jimmy_README.md
     TH1D* fitQunDH = new TH1D("fitQunDH","Angular acceptance against cosine of the reconstructed incident angle;cosine;angular acceptance",10,0,1);
     TH1D* fitQunInAngle = new TH1D("fitQunInAngle","Cosine of the fitQun incident angle;cosine;Number of hit",10,0,1);
     TH1D* WCSimTH = new TH1D("WCSimTH","Angular acceptance against cosine of true incident angle;cosine;angular acceptance",10,0,1);
@@ -62,11 +64,13 @@ void AngAcceptance(const char* filename="./HitPreprocess.root") {
     std::cout << "Number of events: " << TotalEventNum <<
         "\nNumber of digit hits in all events: " << DHTree->GetEntries() << "\n";
 
-    int DHTreeStartPos = 0, DHTreeEndPos, THTreeStartPos = 0, THTreeEndPos;
-    int TimeConstructionFailNum = 0, ignored_track = 0;
+    int DHTreeStartPos = 0, DHTreeEndPos, THTreeStartPos = 0, THTreeEndPos;   //Record the starting and ending position of true/digit hits of a particular event in the THTree/DHTree
+    int ignored_track = 0;  //Number of main track ignored in selection
     for (int i=0; i<TotalEventNum; i++) {
         EventTree->GetEntry(i);
         std::cout << "\r" << i << std::flush;  //Enable this line to show the progress in runtime
+        
+        //select the main track base on the entrance and exit cutoff
         if (selection(fitQunEntrance, fitQunExit)) {
             DHTreeStartPos += DHNum;
             THTreeStartPos += THNum;
@@ -74,61 +78,66 @@ void AngAcceptance(const char* filename="./HitPreprocess.root") {
             continue;
         }
 
+        //calculate the time when the fitQun main track enters the tank for later hit time calculation
         double fitQunEntranceTime;
+        //for fitQun vertex inside the tank
         if ((fitQunPos[2]<max_z)&&((fitQunPos[0]*fitQunPos[0]+fitQunPos[1]*fitQunPos[1])<(max_r*max_r))) {
             fitQunEntranceTime = fitQunVerTime -
                 (1e9)*sqrt((fitQunEntrance[0]-fitQunPos[0])*(fitQunEntrance[0]-fitQunPos[0]) +
                 (fitQunEntrance[1]-fitQunPos[1])*(fitQunEntrance[1]-fitQunPos[1]) +
                 (fitQunEntrance[2]-fitQunPos[2])*(fitQunEntrance[2]-fitQunPos[2]))/TMath::Ccgs();
         }
+        //for fitQun vertex outside the tank
         else {
             fitQunEntranceTime = fitQunVerTime +
                 (1e9)*sqrt((fitQunEntrance[0]-fitQunPos[0])*(fitQunEntrance[0]-fitQunPos[0]) +
                 (fitQunEntrance[1]-fitQunPos[1])*(fitQunEntrance[1]-fitQunPos[1]) +
                 (fitQunEntrance[2]-fitQunPos[2])*(fitQunEntrance[2]-fitQunPos[2]))/TMath::Ccgs();
         }
-        if (fitQunEntranceTime<0) {
-            DHTreeStartPos += DHNum;
-            THTreeStartPos += THNum;
-            TimeConstructionFailNum++;
-            continue;
-        }
 
-        const std::vector<std::vector<double>> fitQunPhoTrack = TrackReconstruction(fitQunEntrance, fitQunDir, PMTPos, PMTOri);
-        double PMTQ1[2014];
+        //recontruction of the Cherenkov photon track by the function TrackReconstruction()
+        const std::vector<std::vector<double>> fitQunPhoTrack = TrackReconstruction(fitQunEntrance, fitQunDir, PMTPos, PMTOri);    //vector carrying information of the Cherenkov photon track recontructed from fitQun vertex
+        double PMTQ1[2014];     //array carrying the charge/number of hits of each PMT in this event
+        
+        //looping the PMTs
         for (int j=0; j<2014; j++) {
-            if (fitQunPhoTrack[j][0]==-1) {continue;}
-            PMTQ1[j] = 0;
-            fitQunInAngle->Fill(fitQunPhoTrack[j][1]);
+            PMTQ1[j] = 0;   //set the charge to 0
+            if (fitQunPhoTrack[j][0]==-1) {continue;}   //skip when reconstruction fails
+            fitQunInAngle->Fill(fitQunPhoTrack[j][1]);  //Fill the expected incident angle of each PMT if reconstruction success
         }
+        //looping the digit hit of this event
         DHTreeEndPos = DHTreeStartPos + DHNum;
         for (int j=DHTreeStartPos; j<DHTreeEndPos; j++) {
             DHTree->GetEntry(j);
             if (fitQunPhoTrack[DHPMT][0]==-1) {continue;}
             double fitQunTimeError = fitQunEntranceTime + fitQunPhoTrack[DHPMT][0] - DHTime;
-            if (fitQunTimeError<-2.1492) {continue;}
+            if (fitQunTimeError<-2.1492) {continue;}    //Timing cutoff
             PMTQ1[DHPMT] += Charge;
         }
-        DHTreeStartPos = DHTreeEndPos;
+        DHTreeStartPos = DHTreeEndPos;      //Renew the starting and ending position of the DHTree for the next event
+        
+        //looping all PMTs 
         for (int j=0; j<2014; j++) {
-            if (fitQunPhoTrack[j][0]==-1) {continue;}
-            fitQunBinHist[(int)std::floor(fitQunPhoTrack[j][1]*10)]->Fill(PMTQ1[j]*fitQunPhoTrack[j][2]);
+            if (fitQunPhoTrack[j][0]==-1) {continue;}   //skip when reconstruction fails
+            fitQunBinHist[(int)std::floor(fitQunPhoTrack[j][1]*10)]->Fill(PMTQ1[j]*fitQunPhoTrack[j][2]);   //Fill the Q*d histogram of the corresponding bin
             if (PMTQ1[j]==0) {continue;}
-            fitQunDH->Fill(fitQunPhoTrack[j][1],PMTQ1[j]*fitQunPhoTrack[j][2]);
+            fitQunDH->Fill(fitQunPhoTrack[j][1],PMTQ1[j]*fitQunPhoTrack[j][2]);     //Fill the Q*d histogram
         }
         
+        //calculate the time when the fitQun main track enters the tank for later hit time calculation
         double WCSimEntranceTime = (1e9)*sqrt((WCSimEntrance[0]-WCSimStartPos[0])*(WCSimEntrance[0]-WCSimStartPos[0]) +
             (WCSimEntrance[1]-WCSimStartPos[1])*(WCSimEntrance[1]-WCSimStartPos[1]) +
             (WCSimEntrance[2]-WCSimStartPos[2])*(WCSimEntrance[2]-WCSimStartPos[2]))/TMath::Ccgs();
 
-        const std::vector<std::vector<double>> TruePhoTrack = TrackReconstruction(WCSimEntrance, WCSimDir, PMTPos, PMTOri);
-        double PMTQ2[2014];
+        const std::vector<std::vector<double>> TruePhoTrack = TrackReconstruction(WCSimEntrance, WCSimDir, PMTPos, PMTOri);    //vector carrying information of the Cherenkov photon track recontructed from WCSim
+        double PMTQ2[2014];     //array carrying the charge/number of hits of each PMT in this event
         for (int j=0; j<2014; j++) {
+            PMTQ1[j] = 0;   //set the charge to 0
+            PMTQ2[j] = 0;   //set the charge to 0
             if (TruePhoTrack[j][0]==-1) {continue;}
-            PMTQ1[j] = 0;
-            PMTQ2[j] = 0;
-            TrueInAngle->Fill(TruePhoTrack[j][1]);
+            TrueInAngle->Fill(TruePhoTrack[j][1]);  //Fill the expected incident angle of each PMT if reconstruction success
         }
+        //looping the true hits of this event
         THTreeEndPos = THTreeStartPos + THNum;
         for (int j=THTreeStartPos; j<THTreeEndPos; j++) {
             THTree->GetEntry(j);
@@ -137,17 +146,17 @@ void AngAcceptance(const char* filename="./HitPreprocess.root") {
             if (TruePhoTrack[THPMT][0]!=(-1)) {PMTQ1[THPMT]++;}
             if (fitQunPhoTrack[THPMT][0]!=(-1)) {PMTQ2[THPMT]++;}
         }
-        THTreeStartPos = THTreeEndPos;
+        THTreeStartPos = THTreeEndPos;      //Renew the starting and ending position of the THTree for the next event
+        //looping all PMTs
         for (int j=0; j<2014; j++) {
             if (TruePhoTrack[j][0]==-1) {continue;}
-            TrueBinHist[(int)std::floor(TruePhoTrack[j][1]*10)]->Fill(PMTQ1[j]*TruePhoTrack[j][2]);
-            if (PMTQ1[j]!=0) {WCSimTH->Fill(TruePhoTrack[j][1],PMTQ1[j]*TruePhoTrack[j][2]);}
-            if (PMTQ2[j]!=0) {fitQunTH->Fill(TruePhoTrack[j][1],PMTQ2[j]*TruePhoTrack[j][2]);}
+            TrueBinHist[(int)std::floor(TruePhoTrack[j][1]*10)]->Fill(PMTQ1[j]*TruePhoTrack[j][2]);   //Fill the Q*d histogram of the corresponding bin
+            if (PMTQ1[j]!=0) {WCSimTH->Fill(TruePhoTrack[j][1],PMTQ1[j]*TruePhoTrack[j][2]);}     //Fill the Q*d histogram
+            if (PMTQ2[j]!=0) {fitQunTH->Fill(TruePhoTrack[j][1],PMTQ2[j]*TruePhoTrack[j][2]);}     //Fill the Q*d histogram
         }
     }
 
-    std::cout << "Number of tracks ignored: " << ignored_track << "\n" << 
-        "Number of fitQun recontructed tracks which fails to calculate the entrance time: " << TimeConstructionFailNum << "\n";
+    std::cout << "Number of tracks ignored: " << ignored_track << "\n";
 
     TCanvas* c1 = new TCanvas();
     TrueInAngle->Draw();
@@ -155,37 +164,44 @@ void AngAcceptance(const char* filename="./HitPreprocess.root") {
     fitQunInAngle->Draw();
     c1->SaveAs(Form("fitQunInAngle.pdf"));
 
+    //divide the Q*d histogram by the expected number of PMT being hit bin by bin
     int nbins = WCSimTH->GetNbinsX();
     for (int i=1; i<=nbins; i++) {
         double CurrentValue = WCSimTH->GetBinContent(i);
         WCSimTH->SetBinContent(i, CurrentValue/(TrueInAngle->GetBinContent(i)));
     }
+    //Normalization (the largest bin, cosine of incident angle > 0.9, being 1)
     double NormalizationFactor = WCSimTH->GetBinContent(nbins);
     for (int i=1; i<=nbins; i++) {
         double CurrentValue = WCSimTH->GetBinContent(i);
         WCSimTH->SetBinContent(i, CurrentValue/NormalizationFactor);
     }
 
+    //divide the Q*d histogram by the expected number of PMT being hit bin by bin
     for (int i=1; i<=nbins; i++) {
         double CurrentValue = fitQunDH->GetBinContent(i);
         fitQunDH->SetBinContent(i, CurrentValue/(fitQunInAngle->GetBinContent(i)));
     }
+    //Normalization (the largest bin, cosine of incident angle > 0.9, being 1)
     NormalizationFactor = fitQunDH->GetBinContent(nbins);
     for (int i=1; i<=nbins; i++) {
         double CurrentValue = fitQunDH->GetBinContent(i);
         fitQunDH->SetBinContent(i, CurrentValue/NormalizationFactor);
     }
 
+    //divide the Q*d histogram by the expected number of PMT being hit bin by bin
     for (int i=1; i<=nbins; i++) {
         double CurrentValue = fitQunTH->GetBinContent(i);
         fitQunTH->SetBinContent(i, CurrentValue/(fitQunInAngle->GetBinContent(i)));
     }
+    //Normalization (the largest bin, cosine of incident angle > 0.9, being 1)
     NormalizationFactor = fitQunTH->GetBinContent(nbins);
     for (int i=1; i<=nbins; i++) {
         double CurrentValue = fitQunTH->GetBinContent(i);
         fitQunTH->SetBinContent(i, CurrentValue/NormalizationFactor);
     }
 
+    //Plot the Q*d histogram bin by bin of the angular acceptance histogram
     for (int i=0; i<10; i++) {
         TrueBinHist[i]->SetStats(0);
         TrueBinHist[i]->SetLineColor(kRed);
@@ -205,6 +221,7 @@ void AngAcceptance(const char* filename="./HitPreprocess.root") {
         c1->SaveAs(title.c_str());
     }
 
+    //save the angular acceptance histogram into root files
     TFile* Hist = new TFile("AngAcceptance.root", "RECREATE");
     WCSimTH->Write();
     fitQunDH->Write();

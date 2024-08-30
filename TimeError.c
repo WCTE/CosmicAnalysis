@@ -4,7 +4,7 @@ R__LOAD_LIBRARY(/opt/WCSim/build/install/lib/libWCSimRoot.so)
 #define max_z 141.5
 #include "function.h"   //contains functions for main(muon) tracks selection and photon tracks reconstruction
 
-void TimeError(const char* filename="./HitPreprocess.root") {
+void TimeError(const char* filename="./WCSimfitQunHitPreprocess.root") {
     //Open the file
     TFile* File = new TFile(filename, "read");
     if (!File->IsOpen()){
@@ -12,7 +12,7 @@ void TimeError(const char* filename="./HitPreprocess.root") {
         return;
     }
 
-    //Set up branch address, refer to the code description of "HitPreprocess.root" for meaning of each branch
+    //Refer to code description of WCSimfitQunHitPreprocess.c for details of each branch
     TTree* EventTree = (TTree*)File->Get("EventTree");
     int THNum, DHNum;
     double fitQunVerTime, fitQunPos[3], fitQunDir[3], fitQunEntrance[3], fitQunExit[3], WCSimEntrance[3], WCSimStartPos[3], WCSimDir[3];
