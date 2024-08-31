@@ -203,11 +203,17 @@ void AngAcceptance(const char* filename="./WCSimfitQunHitPreprocess.root") {
 
     //Plot the Q*d histogram bin by bin of the angular acceptance histogram
     for (int i=0; i<10; i++) {
+        std::string title;
         TrueBinHist[i]->SetStats(0);
         TrueBinHist[i]->SetLineColor(kRed);
         fitQunBinHist[i]->SetStats(0);
         fitQunBinHist[i]->SetLineColor(kBlue);
-        std::string title = "Charge*distance distribution (Cosine of incident angle: [0." + std::to_string(i) + "-0." + std::to_string(i+1) + "])";
+        if (i!=9) {
+            title = "Charge*distance distribution (Cosine of incident angle: [0." + std::to_string(i) + "-0." + std::to_string(i+1) + "])";
+        }
+        else {
+            title = "Charge*distance distribution (Cosine of incident angle: [0.9-1.0])";
+        }
         TrueBinHist[i]->SetTitle(title.c_str());
         TrueBinHist[i]->SetXTitle("Charge * distance");
         TrueBinHist[i]->SetYTitle("Number of PMT hits");
@@ -217,7 +223,12 @@ void AngAcceptance(const char* filename="./WCSimfitQunHitPreprocess.root") {
         legend->AddEntry(TrueBinHist[i], "True", "l");
         legend->AddEntry(fitQunBinHist[i], "fitQun", "l");
         legend->Draw();
-        title = "BinHist[0." + std::to_string(i) + "-0." + std::to_string(i+1) + "].pdf";
+        if (i!=9) {
+            title = "BinHist[0." + std::to_string(i) + "-0." + std::to_string(i+1) + "].pdf";
+        }
+        else {
+            title = "BinHist[0.9-1.0].pdf";
+        }
         c1->SaveAs(title.c_str());
     }
 

@@ -55,7 +55,6 @@ void TimeError(const char* filename="./WCSimfitQunHitPreprocess.root") {
         "\nNumber of digit hits in all events: " << DHTree->GetEntries() << "\n";
 
     int THTreeStartPos = 0, THTreeEndPos, DHTreeStartPos = 0, DHTreeEndPos;     //Starting and ending position of each event in the DHTree and THTree
-    int TimeConstructionFailNum = 0;     //Number of main tracks that fail to reconstruct the entrance time (calculation gives a negative entrance time)
     int ignored_track = 0;      //Number of tracks filtered out by the selection() function
     
     //looping the event tree
@@ -85,13 +84,6 @@ void TimeError(const char* filename="./WCSimfitQunHitPreprocess.root") {
                 (fitQunEntrance[1]-fitQunPos[1])*(fitQunEntrance[1]-fitQunPos[1]) +
                 (fitQunEntrance[2]-fitQunPos[2])*(fitQunEntrance[2]-fitQunPos[2]))/TMath::Ccgs();
         }
-        //reject negative entrance time
-        if (fitQunEntranceTime<0) {
-            THTreeStartPos += THNum;    //renew starting position of THTree
-            DHTreeStartPos += DHNum;    //renew starting position of DHTree
-            TimeConstructionFailNum++;
-            continue;
-        }
 
         const std::vector<std::vector<double>> fitQunPhoTrack = TrackReconstruction(fitQunEntrance, fitQunDir, PMTPos, PMTOri);     //2D array contains three parameters of a reconstruct photon track(from the fitQun vertex) for all 2014 PMTs. Check the code description of "function.h" for more details
         DHTreeEndPos = DHTreeStartPos + DHNum;      //renew ending position of DHTree
@@ -117,8 +109,7 @@ void TimeError(const char* filename="./WCSimfitQunHitPreprocess.root") {
         THTreeStartPos = THTreeEndPos;      //renew starting position of THTree
     }
 
-    std::cout << "Number of tracks ignored: " << ignored_track <<
-        "\nNumber of digitized hits that fail to reconstructed main track entering time: " << TimeConstructionFailNum << "\n";
+    std::cout << "Number of tracks ignored: " << ignored_track << "\n";
 
     //Draw histogram
     TCanvas* c1 = new TCanvas();

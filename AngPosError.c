@@ -33,7 +33,7 @@ std::vector<std::vector<double>> TrackReconstruction(const double VerPos[3], con
 
         //theta is the angle between the entrance direction vector and the VerToPMTDir[3] vector
         theta = VerToPMTDir[0]*VerDir[0] + VerToPMTDir[1]*VerDir[1] + VerToPMTDir[2]*VerDir[2];     //This is the value of cos(theta)
-        if (fabs(theta)>1) {theta = 1}  //avoid numerial percision problem
+        if (fabs(theta)>1) {theta = 1;}  //avoid numerial percision problem
         theta = acos(theta);
         //Reconstruction fail when theta > emission angle of the Cherenkov photon
         if (theta>=WaterCherenkovAng) {
