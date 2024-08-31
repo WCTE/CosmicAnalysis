@@ -111,7 +111,7 @@ void AngAcceptance(const char* filename="./WCSimfitQunHitPreprocess.root") {
             DHTree->GetEntry(j);
             if (fitQunPhoTrack[DHPMT][0]==-1) {continue;}
             double fitQunTimeError = fitQunEntranceTime + fitQunPhoTrack[DHPMT][0] - DHTime;
-            if (fitQunTimeError<-2.1492) {continue;}    //Timing cutoff
+            if (fitQunTimeError<-2.1753) {continue;}    //Timing cutoff
             PMTQ1[DHPMT] += Charge;
         }
         DHTreeStartPos = DHTreeEndPos;      //Renew the starting and ending position of the DHTree for the next event
@@ -142,7 +142,7 @@ void AngAcceptance(const char* filename="./WCSimfitQunHitPreprocess.root") {
         for (int j=THTreeStartPos; j<THTreeEndPos; j++) {
             THTree->GetEntry(j);
             double TrueTimeError = WCSimEntranceTime + TruePhoTrack[THPMT][0] - THTime;
-            if (TrueTimeError<-1.7599) {continue;}
+            if (TrueTimeError<-1.7589) {continue;}
             if (TruePhoTrack[THPMT][0]!=(-1)) {PMTQ1[THPMT]++;}
             if (fitQunPhoTrack[THPMT][0]!=(-1)) {PMTQ2[THPMT]++;}
         }

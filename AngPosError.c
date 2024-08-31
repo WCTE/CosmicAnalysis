@@ -159,7 +159,7 @@ void AngPosError(const char* filename="./WCSimfitQunHitPreprocess.root") {
             if (TruePhoTrack[THPMT][0]!=(-1)) {
                 double TrueTimeError = WCSimEntranceTime + TruePhoTrack[THPMT][0] - THTime;
                 //timing cutoff
-                if (TrueTimeError>-1.7599) {
+                if (TrueTimeError>-1.7589) {
                     WCSimAngError->Fill(TruePhoTrack[THPMT][1] - TrueInAng);    //WCSim reconstructed incident angle - true incident angle
                     WCSimPosError->Fill(sqrt((TruePhoTrack[THPMT][2]-PhoStartPos[0])*(TruePhoTrack[THPMT][2]-PhoStartPos[0]) +
                         (TruePhoTrack[THPMT][3]-PhoStartPos[1])*(TruePhoTrack[THPMT][3]-PhoStartPos[1]) +
@@ -171,7 +171,7 @@ void AngPosError(const char* filename="./WCSimfitQunHitPreprocess.root") {
                 DHTree->GetEntry(DHID);     //get the corresponding digit hit of the true hit
                 double fitQunTimeError = fitQunEntranceTime + fitQunPhoTrack[THPMT][0] - DHTime;
                 //timing cutoff
-                if (fitQunTimeError>-2.1492) {
+                if (fitQunTimeError>-2.1753) {
                     fitQunAngError->Fill(fitQunPhoTrack[THPMT][1] - TrueInAng);    //fitQun reconstructed incident angle - true incident angle
                     fitQunPosError->Fill(sqrt((fitQunPhoTrack[THPMT][2]-PhoStartPos[0])*(fitQunPhoTrack[THPMT][2]-PhoStartPos[0]) +
                         (fitQunPhoTrack[THPMT][3]-PhoStartPos[1])*(fitQunPhoTrack[THPMT][3]-PhoStartPos[1]) +
