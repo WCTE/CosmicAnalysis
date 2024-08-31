@@ -8,26 +8,32 @@ R__LOAD_LIBRARY(/opt/WCSim/build/install/lib/libWCSimRoot.so)
 bool selector(const int SelectOpt, const double fitQunPos[3], const double fitQunEntrance[3], const double fitQunExit[3], const double EntranceCut = 120, const double ExitCut = 145) {
 
     if (SelectOpt==1) {
-        if (fitQunEntrance[2]!=max_z) {return true;}        //selecting the fitQun entrance point on the top of the tank
-        if (fitQunExit[2]!=-max_z) {return true;}       //selecting the fitQun exit point at the bottom of the tank
+        if (fitQunEntrance[2]>max_z+1e-6) {return true;}        //selecting the fitQun entrance point on the top of the tank
+        if (fitQunEntrance[2]<max_z-1e-6) {return true;}
+        if (fitQunExit[2]>-max_z+1e-6) {return true;}       //selecting the fitQun exit point at the bottom of the tank
+        if (fitQunExit[2]<-max_z-1e-6) {return true;}
     }
     if (SelectOpt==2) {
-        if (fitQunEntrance[2]!=max_z) {return true;}        //selecting the fitQun entrance point on the top of the tank
-        if (fitQunExit[2]!=-max_z) {return true;}       //selecting the fitQun exit point at the bottom of the tank
+        if (fitQunEntrance[2]>max_z+1e-6) {return true;}        //selecting the fitQun entrance point on the top of the tank
+        if (fitQunEntrance[2]<max_z-1e-6) {return true;}
+        if (fitQunExit[2]>-max_z+1e-6) {return true;}       //selecting the fitQun exit point at the bottom of the tank
+        if (fitQunExit[2]<-max_z-1e-6) {return true;}
         if ((fitQunEntrance[0]*fitQunEntrance[0]+fitQunEntrance[1]*fitQunEntrance[1])>=(EntranceCut*EntranceCut)) {return true;}      //radius cut off of the fitQun entrance point
         if ((fitQunExit[0]*fitQunExit[0]+fitQunExit[1]*fitQunExit[1])>=(ExitCut*ExitCut)) {return true;}      //radius cut off of the fitQun exit point
     }
     if (SelectOpt==3) {
-        if (fitQunEntrance[2]!=max_z) {return true;}        //selecting the fitQun entrance point on the top of the tank
-        if (fitQunExit[2]==-max_z) {return true;}       //selecting the fitQun exit point on the barrel of the tank
+        if (fitQunEntrance[2]>max_z+1e-6) {return true;}        //selecting the fitQun entrance point on the top of the tank
+        if (fitQunEntrance[2]<max_z-1e-6) {return true;}
+        if ((fitQunExit[2]<-max_z+1e-6)&&(fitQunExit[2]>-max_z-1e-6)) {return true;}       //selecting the fitQun exit point on the barrel of the tank
     }
     if (SelectOpt==4) {
-        if (fitQunEntrance[2]==max_z) {return true;}        //selecting the fitQun entrance point on the barrel of the tank
-        if (fitQunExit[2]!=-max_z) {return true;}       //selecting the fitQun exit point at the bottom of the tank
+        if (fitQunEntrance[2]<max_z+1e-6)&&(fitQunEntrance[2]>max_z-1e-6) {return true;}        //selecting the fitQun entrance point on the barrel of the tank
+        if (fitQunExit[2]>-max_z+1e-6) {return true;}       //selecting the fitQun exit point at the bottom of the tank
+        if (fitQunExit[2]<-max_z-1e-6) {return true;}
     }
     if (SelectOpt==5) {
-        if (fitQunEntrance[2]==max_z) {return true;}        //selecting the fitQun entrance point on the barrel of the tank
-        if (fitQunExit[2]==-max_z) {return true;}       //selecting the fitQun exit point on the barrel of the tank
+        if (fitQunEntrance[2]<max_z+1e-6)&&(fitQunEntrance[2]>max_z-1e-6) {return true;}        //selecting the fitQun entrance point on the barrel of the tank
+        if ((fitQunExit[2]<-max_z+1e-6)&&(fitQunExit[2]>-max_z-1e-6)) {return true;}       //selecting the fitQun exit point on the barrel of the tank
     }
 
     return false;

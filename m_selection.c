@@ -80,7 +80,7 @@ void m_selection(const char* pname="./WCSim_fitQun_preprocess.root") {
         exit_diff->Reset();
         dist_diff_mean->Fill(cut,dist_diff->GetMean());
         dist_diff->Reset();
-        percentage->Fill(cut,((double)(nEntries-ignored_track))/1000);
+        percentage->Fill(cut,((double)(nEntries-ignored_track))/nEntries);
     }
     delete entrance_diff;
     delete exit_diff;
