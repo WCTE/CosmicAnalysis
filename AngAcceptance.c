@@ -46,7 +46,7 @@ void AngAcceptance(const char* filename="./WCSimfitQunHitPreprocess.root") {
     GeoTree->SetBranchAddress("PMTPos", PMTPos);
     GeoTree->GetEntry(0);
 
-    //Set up histogram, details refer to Jimmy_README.md
+    //Set up histogram, details refer to README.md
     TH1D* fitQunDH = new TH1D("fitQunDH","Angular acceptance against cosine of the reconstructed incident angle;cosine;angular acceptance",10,0,1);
     TH1D* fitQunInAngle = new TH1D("fitQunInAngle","Cosine of the fitQun incident angle;cosine;Number of hit",10,0,1);
     TH1D* WCSimTH = new TH1D("WCSimTH","Angular acceptance against cosine of true incident angle;cosine;angular acceptance",10,0,1);
@@ -111,7 +111,7 @@ void AngAcceptance(const char* filename="./WCSimfitQunHitPreprocess.root") {
             DHTree->GetEntry(j);
             if (fitQunPhoTrack[DHPMT][0]==-1) {continue;}
             double fitQunTimeError = fitQunEntranceTime + fitQunPhoTrack[DHPMT][0] - DHTime;
-            if (fitQunTimeError<-2.1753) {continue;}    //Timing cutoff
+            if (fitQunTimeError<-2.1753) {continue;}    //Timing cutoff, deduced from TimeError.c
             PMTQ1[DHPMT] += Charge;
         }
         DHTreeStartPos = DHTreeEndPos;      //Renew the starting and ending position of the DHTree for the next event
@@ -142,7 +142,7 @@ void AngAcceptance(const char* filename="./WCSimfitQunHitPreprocess.root") {
         for (int j=THTreeStartPos; j<THTreeEndPos; j++) {
             THTree->GetEntry(j);
             double TrueTimeError = WCSimEntranceTime + TruePhoTrack[THPMT][0] - THTime;
-            if (TrueTimeError<-1.7589) {continue;}
+            if (TrueTimeError<-1.7589) {continue;}  //Timing cutoff, deduced from TimeError.c
             if (TruePhoTrack[THPMT][0]!=(-1)) {PMTQ1[THPMT]++;}
             if (fitQunPhoTrack[THPMT][0]!=(-1)) {PMTQ2[THPMT]++;}
         }
@@ -224,10 +224,10 @@ void AngAcceptance(const char* filename="./WCSimfitQunHitPreprocess.root") {
         legend->AddEntry(fitQunBinHist[i], "fitQun", "l");
         legend->Draw();
         if (i!=9) {
-            title = "BinHist[0." + std::to_string(i) + "-0." + std::to_string(i+1) + "].pdf";
+            title = "BinHist_0." + std::to_string(i) + "-0." + std::to_string(i+1) + ".pdf";
         }
         else {
-            title = "BinHist[0.9-1.0].pdf";
+            title = "BinHist_0.9-1.0.pdf";
         }
         c1->SaveAs(title.c_str());
     }

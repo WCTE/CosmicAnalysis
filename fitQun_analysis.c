@@ -5,7 +5,7 @@
 R__LOAD_LIBRARY(/opt/WCSim/build/install/lib/libWCSimRoot.so)
 
 //function for extrapolation of the reconstructed vertex, return true when the track formed by extrapolation of vertex does not across the tank
-bool extrapolation(float fq1rpos[2][7][3], float fq1rdir[2][7][3], double entrance[3], double exit[3], double R=max_r, double Z=max_z) {
+bool extrapolation(float fq1rpos[100][7][3], float fq1rdir[100][7][3], double entrance[3], double exit[3], double R=max_r, double Z=max_z) {
     double z = fq1rpos[0][2][1];
     if (z<(-Z)) {return true;}      //select vertices with z coordinate not lower than the bottom of the tank
     double z_dir = fq1rdir[0][2][1];
@@ -128,8 +128,8 @@ void fitQun_analysis(const char* filename = "/work/kmtsui/wcte/cosmic/hk_flux/fq
     std::cout << "Number of entries: " << nEntries << "\n";
 
     //Set up branches for fitQun data
-    float fq1rpos[2][7][3];
-    float fq1rdir[2][7][3];
+    float fq1rpos[100][7][3];
+    float fq1rdir[100][7][3];
     t->SetBranchAddress("fq1rpos",fq1rpos);
     t->SetBranchAddress("fq1rdir",fq1rdir);
     

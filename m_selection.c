@@ -21,7 +21,7 @@ static bool selector(const int SelectOpt, double fitQunEntrance[3], const double
     return false;
 }
 
-void m_selection(const char* pname="./WCSim_fitQun_preprocess.root") {
+void m_selection(const int SelectOpt, const char* pname="./WCSim_fitQun_preprocess.root") {
     //starting cut positions must be smaller than the ending cut positions
     //total length (i.e. end-start) must be divisible by the interval
     double start = 0, end = 162, interval = 1;
@@ -59,7 +59,7 @@ void m_selection(const char* pname="./WCSim_fitQun_preprocess.root") {
                 ignored_track++;
                 continue;
             }
-            if (selector(fitQunEntrance, fitQunExit, cut)) {
+            if (selector(SelectOpt,fitQunEntrance, fitQunExit, cut)) {
                 ignored_track++;
                 continue;
             }
@@ -82,25 +82,17 @@ void m_selection(const char* pname="./WCSim_fitQun_preprocess.root") {
         dist_diff->Reset();
         percentage->Fill(cut,((double)(nEntries-ignored_track))/nEntries);
     }
-    delete entrance_diff;
-    delete exit_diff;
-    delete dist_diff;
 
     //plotting
     TCanvas* c1 = new TCanvas();
     entrance_diff_mean->Draw("hist");
     c1->SaveAs(Form("entrance_diff_mean.pdf"));
-    delete entrance_diff_mean;
     exit_diff_mean->Draw("hist");
     c1->SaveAs(Form("exit_diff_mean.pdf"));
-    delete exit_diff_mean;
     dist_diff_mean->Draw("hist");
     c1->SaveAs(Form("dist_diff_mean.pdf"));
-    delete dist_diff_mean;
     percentage->Draw("hist");
     c1->SaveAs(Form("percentage.pdf"));
-    delete percentage;
-    delete c1;
     tree->Reset();
     file->Close();
 }

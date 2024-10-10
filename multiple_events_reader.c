@@ -97,10 +97,6 @@ void multiple_events_reader(const char* filename="/work/kmtsui/wcte/cosmic/hk_fl
     delete exit_display;
     Q_vs_E->Draw("colz");
     c1->SaveAs(Form("Charge_vs_energy_WCSim.pdf"));
-    delete Q_vs_E;
 
     t->Reset();
-    delete c1;
-    delete wcsimrootsuperevent;
-    delete wcsimroottrack;
 }

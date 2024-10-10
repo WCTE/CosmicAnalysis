@@ -109,7 +109,7 @@ void read_main_track(int iEvent=0, const char *filename="/work/kmtsui/wcte/cosmi
 
     //projection of the PMTs charge with the corresponding position on a 2D histogram
     TH2D* hist_event_display = new TH2D("Charges","Charges",250,-TMath::Pi()*max_r,TMath::Pi()*max_r,250,-max_z-2*max_r,max_z+2*max_r);
-    double barrelCut = max_z-0.01;  //points with the absolute value of z coordinate larger than barrelCut will be treated as points on either the top or bottom of the tank 
+    double barrelCut = max_z-20;  //points with the absolute value of z coordinate larger than barrelCut will be treated as points on either the top or bottom of the tank 
     for (int i=0; i<nPMTs_type0; i++) {
         //rotation for event display
         double x = -(geo->GetPMT(i)).GetPosition(0);
@@ -176,11 +176,6 @@ void read_main_track(int iEvent=0, const char *filename="/work/kmtsui/wcte/cosmi
     m2.SetMarkerColor(kBlack);
     m2.Draw();
     c1->SaveAs(Form("Charge_Display.pdf"));
-    delete hist_event_display;
 
     file->Close();
-    delete wcsimrootsuperevent;
-    delete wcsimroottrack;
-    delete geo;
-    delete c1;
 }

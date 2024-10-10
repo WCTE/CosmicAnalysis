@@ -4,7 +4,7 @@
 R__LOAD_LIBRARY(/opt/WCSim/build/install/lib/libWCSimRoot.so)
 
 //function for extrapolation of the reconstructed vertex, return true when the track formed by extrapolation of vertex does not across the tank
-bool extrapolation(float fq1rpos[2][7][3], float fq1rdir[2][7][3], double entrance[3], double exit[3], double R=max_r, double Z=max_z) {
+bool extrapolation(float fq1rpos[100][7][3], float fq1rdir[100][7][3], double entrance[3], double exit[3], double R=max_r, double Z=max_z) {
     double z = fq1rpos[0][2][1];
     if (z<(-Z)) {return true;}      //select vertices with z coordinate not lower than the bottom of the tank
     double z_dir = fq1rdir[0][2][1];
@@ -132,9 +132,9 @@ void WCSim_fitQun_preprocess(const char* fname="/work/kmtsui/wcte/cosmic/new_pho
     else {std::cout << "Number of entries: " << nEntries << "\n";}
 
     //Set up branches for fitQun data
-    float fq1rpos[2][7][3];
-    float fq1rdir[2][7][3];
-    float fq1rnll[2][7];
+    float fq1rpos[100][7][3];
+    float fq1rdir[100][7][3];
+    float fq1rnll[100][7];
     ft->SetBranchAddress("fq1rpos",fq1rpos);
     ft->SetBranchAddress("fq1rdir",fq1rdir);
     ft->SetBranchAddress("fq1rnll",fq1rnll);
@@ -169,6 +169,8 @@ void WCSim_fitQun_preprocess(const char* fname="/work/kmtsui/wcte/cosmic/new_pho
         if (extrapolation(fq1rpos, fq1rdir, fitQunEntrance, fitQunExit)) {continue;}    //perform extrapolation
 
         //WCSim part
+        delete wcsimrootsuperevent;
+        wcsimrootsuperevent = 0;  // EXTREMELY IMPORTANT
         wt->GetEntry(i);
         WCSimRootTrigger* wcsimrootevent = wcsimrootsuperevent->GetTrigger(0);
         //search for main track
@@ -224,6 +226,4 @@ void WCSim_fitQun_preprocess(const char* fname="/work/kmtsui/wcte/cosmic/new_pho
     file->Close();
     ft->Reset();
     wt->Reset();
-    delete wcsimrootsuperevent;
-    delete wcsimroottrack;
 }

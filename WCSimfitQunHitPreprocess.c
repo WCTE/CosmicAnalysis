@@ -142,9 +142,9 @@ void WCSimfitQunHitPreprocess(const char* fname="/work/kmtsui/wcte/cosmic/new_ph
     std::cout << "Number of entries: " << nEntries << "\n";
 
     //Setup branches to read the fitQun and WCSim root files
-    float fq1rpos[2][7][3];
-    float fq1rdir[2][7][3];
-    float fq1rt0[2][7];
+    float fq1rpos[100][7][3];
+    float fq1rdir[100][7][3];
+    float fq1rt0[100][7];
     ft->SetBranchAddress("fq1rpos",fq1rpos);
     ft->SetBranchAddress("fq1rdir",fq1rdir);
     ft->SetBranchAddress("fq1rt0",fq1rt0);
@@ -249,6 +249,8 @@ void WCSimfitQunHitPreprocess(const char* fname="/work/kmtsui/wcte/cosmic/new_ph
         }
         fitQunVerTime = fq1rt0[0][2];   //g
 
+        delete wcsimrootsuperevent;
+        wcsimrootsuperevent = 0;  // EXTREMELY IMPORTANT
         wt->GetEntry(i);
         WCSimRootTrigger* wcsimrootevent = wcsimrootsuperevent->GetTrigger(0);
         //search for main track
@@ -285,15 +287,16 @@ void WCSimfitQunHitPreprocess(const char* fname="/work/kmtsui/wcte/cosmic/new_ph
         THNum = wcsimrootevent->GetNcherenkovhittimes();
 
         TClonesArray* WRCDHArray = wcsimrootevent->GetCherenkovDigiHits();    //Array of WCSimRootCherenkovDigiHit pointer
-        DHNum = WRCDHArray->GetEntriesFast();
-        for (int j=0; j<DHNum; j++) {
-            //ignore extremely long digit time (>200 ns)
-            if (((WCSimRootCherenkovDigiHit*) WRCDHArray->At(j))->GetT()>200) {
-                WRCDHArray->RemoveAt(j);
-            }
-        }
-        WRCDHArray->Compress();
+        // DHNum = WRCDHArray->GetEntriesFast();
+        // for (int j=0; j<DHNum; j++) {
+        //     //ignore extremely long digit time (>200 ns)
+        //     if (((WCSimRootCherenkovDigiHit*) WRCDHArray->At(j))->GetT()>200) {
+        //         WRCDHArray->RemoveAt(j);
+        //     }
+        // }
+        // WRCDHArray->Compress();
         DHNum = WRCDHArray->GetEntriesFast();    //g
+        std::vector<int> vDHID(wcsimrootevent->GetNcherenkovhits(),-1); // DHTree position for each true hit
         //loop the array and fill the DHTree
         for (int j=0; j<DHNum; j++) {
             WCSimRootCherenkovDigiHit* WRCDH = (WCSimRootCherenkovDigiHit*) WRCDHArray->At(j);
@@ -301,6 +304,12 @@ void WCSimfitQunHitPreprocess(const char* fname="/work/kmtsui/wcte/cosmic/new_ph
             DHTime = WRCDH->GetT();     //g
             Charge = WRCDH->GetQ();     //g
             DHTree->Fill();
+
+            std::vector<int> fPhotonIds = WRCDH->GetPhotonIds();
+            for (int m : fPhotonIds)
+            {
+                if ( m!=-1 && m<vDHID.size() ) vDHID[m] = DHTree->GetEntries()-1;
+            }
         }
 
         //loop for the PMTs with true hit in this event
@@ -318,17 +327,17 @@ void WCSimfitQunHitPreprocess(const char* fname="/work/kmtsui/wcte/cosmic/new_ph
                     continue;
                 }   //ignore dark noise
 
-                DHID = -1;  //The DHTree position will be set to -1 if the true hit does not generate a digit hit
-                for (int n=0; n<DHNum; n++) {
-                    WCSimRootCherenkovDigiHit* WRCDH = (WCSimRootCherenkovDigiHit*) WRCDHArray->At(n);
-                    std::vector<int> fPhotonIds = WRCDH->GetPhotonIds();
-                    for (int m : fPhotonIds) {
-                        if (m!=k) {continue;}
-                        DHID = DHTree->GetEntries()-1 - (DHNum-1-n);    //g
-                        break;
-                    }
-                    if (DHID!=(-1)) {break;}
-                }
+                DHID = vDHID[j]; //-1;  //The DHTree position will be set to -1 if the true hit does not generate a digit hit
+                // for (int n=0; n<DHNum; n++) {
+                //     WCSimRootCherenkovDigiHit* WRCDH = (WCSimRootCherenkovDigiHit*) WRCDHArray->At(n);
+                //     std::vector<int> fPhotonIds = WRCDH->GetPhotonIds();
+                //     for (int m : fPhotonIds) {
+                //         if (m!=k) {continue;}
+                //         DHID = DHTree->GetEntries()-1 - (DHNum-1-n);    //g
+                //         break;
+                //     }
+                //     if (DHID!=(-1)) {break;}
+                // }
 
                 THTime = WRCHT->GetTruetime();    //g
                 PhoStartPos[0] = -WRCHT->GetPhotonStartPos(0)/10;    //g

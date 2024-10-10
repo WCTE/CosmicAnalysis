@@ -27,19 +27,19 @@ bool selector(const int SelectOpt, const double fitQunPos[3], const double fitQu
         if ((fitQunExit[2]<-max_z+1e-6)&&(fitQunExit[2]>-max_z-1e-6)) {return true;}       //selecting the fitQun exit point on the barrel of the tank
     }
     if (SelectOpt==4) {
-        if (fitQunEntrance[2]<max_z+1e-6)&&(fitQunEntrance[2]>max_z-1e-6) {return true;}        //selecting the fitQun entrance point on the barrel of the tank
+        if (fitQunEntrance[2]<max_z+1e-6&&fitQunEntrance[2]>max_z-1e-6) {return true;}        //selecting the fitQun entrance point on the barrel of the tank
         if (fitQunExit[2]>-max_z+1e-6) {return true;}       //selecting the fitQun exit point at the bottom of the tank
         if (fitQunExit[2]<-max_z-1e-6) {return true;}
     }
     if (SelectOpt==5) {
-        if (fitQunEntrance[2]<max_z+1e-6)&&(fitQunEntrance[2]>max_z-1e-6) {return true;}        //selecting the fitQun entrance point on the barrel of the tank
+        if (fitQunEntrance[2]<max_z+1e-6&&fitQunEntrance[2]>max_z-1e-6) {return true;}        //selecting the fitQun entrance point on the barrel of the tank
         if ((fitQunExit[2]<-max_z+1e-6)&&(fitQunExit[2]>-max_z-1e-6)) {return true;}       //selecting the fitQun exit point on the barrel of the tank
     }
 
     return false;
 }
 
-void s_selection(const char* pname="./WCSim_fitQun_preprocess.root") {
+void s_selection(int SelectOpt, const char* pname="./WCSim_fitQun_preprocess.root") {
     //Get the preprocessed file
     TFile* file = new TFile(pname, "read");
     if (!file->IsOpen()){
@@ -77,7 +77,7 @@ void s_selection(const char* pname="./WCSim_fitQun_preprocess.root") {
     for (int i=0; i<nEntries; i++) {
         tree->GetEntry(i);
         //selection of event
-        if (selector(fitQunPos, fitQunEntrance, fitQunExit)) {
+        if (selector(SelectOpt, fitQunPos, fitQunEntrance, fitQunExit)) {
             ignored_track++;
             continue;
         }
@@ -105,13 +105,10 @@ void s_selection(const char* pname="./WCSim_fitQun_preprocess.root") {
     TCanvas* c1 = new TCanvas();
     entrance_diff->Draw();
     c1->SaveAs(Form("entrance_diff.pdf"));
-    delete entrance_diff;
     exit_diff->Draw();
     c1->SaveAs(Form("exit_diff.pdf"));
-    delete exit_diff;
     dist_diff->Draw();
     c1->SaveAs(Form("dist_diff.pdf"));
-    delete dist_diff;
     Q_over_trueL->Draw();
     c1->SaveAs(Form("Q_over_trueL.pdf"));
     Q_over_reconstructedL->Draw();
@@ -133,19 +130,12 @@ void s_selection(const char* pname="./WCSim_fitQun_preprocess.root") {
     legend->SetTextSize(0.04);
     legend->Draw();
     c1->SaveAs(Form("Q_over_dist.pdf"));
-    delete Q_over_trueL;
-    delete Q_over_reconstructedL;
-    delete legend;
 
     QvsRL->Draw("Colz");
     c1->SaveAs(Form("QvsRL.pdf"));
-    delete QvsRL;
     QvsTL->Draw("Colz");
     c1->SaveAs(Form("QvsTL.pdf"));
-    delete QvsTL;
-    delete c1;
 
     tree->Reset();
     file->Close();
-    delete c1;
 }
