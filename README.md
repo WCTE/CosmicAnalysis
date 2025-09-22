@@ -23,7 +23,7 @@ To further improve selection purity, the fiTQun reconstructed vertex and directi
 - reconstructed entrance point on the top cap
 - reconstructed exit point on the top cap
 
-After the selection, 27% of all the muons remain. The purity of top-down events is 91%. Meanwhile over 99% of the selected events are with truth `cos(zenith_angle)>0.7`.
+After the selection, 26% of all the muons remain. The selection efficiency and purity of top-down events are 85% and 93% respectively. Meanwhile over 99% of the selected events are with truth `cos(zenith_angle)>0.7`.
 
 ### convert_to_h5.py
 Convert wcsim and fiTQun root files into a single h5 for ML studies. The h5 file contains the following arrays:
