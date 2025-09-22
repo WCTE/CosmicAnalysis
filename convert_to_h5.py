@@ -200,10 +200,6 @@ def convert_to_h5():
                 pass_selection[i] = False
             if not fqtopdown:
                 pass_selection[i] = False
-        
-        if pass_selection[i]:
-            hist_pos_diff.Fill(np.linalg.norm(exit_pos[i] - fq_exit_pos[i]))
-            hist_dir_diff.Fill(direction[i][0]*fq_direction[i][0]+direction[i][1]*fq_direction[i][1]+direction[i][2]*fq_direction[i][2])
 
     print('vertex.shape = ',vertex.shape)
     print('direction.shape = ',direction.shape)
