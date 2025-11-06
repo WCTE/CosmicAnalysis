@@ -64,7 +64,7 @@ void CreateBadChannelList(int run_num=1766)
     chain->SetBranchAddress("window_data_quality",&window_data_quality);
     chain->SetBranchAddress("hit_pmt_readout_mask",&hit_pmt_readout_mask);
     std::vector<bool> active_pmts(1843,false);
-    nevent = 10000;
+    // nevent = 10000;
     int count1pc = nevent/100;
     if (count1pc==0) count1pc=1;
     for (long int i=0;i<nevent;i++)
