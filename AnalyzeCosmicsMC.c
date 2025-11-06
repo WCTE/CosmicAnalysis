@@ -1,8 +1,10 @@
 R__LOAD_LIBRARY($WCSIM_BUILD_DIR/lib/libWCSimRoot.so)
 
-void AnalyzeCosmicsMC(const char * fname="/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/wcsim_wCDS_Comsics_00*.root", 
-                      const char * fqname="/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/fiTQun/fq_00*.root", 
-                      bool topdownonly = false, bool applyselection=false)
+void AnalyzeCosmicsMC(
+    const char * fname= "/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/mdt/mdt_cosmics_00*.root", 
+    const char * fqname="/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/mdt/fiTQun/fq_00*.root", 
+    bool topdownonly = false, bool applyselection=true, const char * maks_file_name="maskFile_1766.txt"
+)
 {
     // gStyle->SetOptStat(0);
 
@@ -24,11 +26,13 @@ void AnalyzeCosmicsMC(const char * fname="/eos/experiment/wcte/MC_Production/v1.
     tFQ->Add(fqname);
     t->AddFriend(tFQ);
     int fqnse;
+    float fq1rt0[100][7];
     float fq1rpos[100][7][3];
     float fq1rdir[100][7][3];
     float fq1rnll[100][7];
     float fq1rmom[100][7];
     t->SetBranchAddress("fqnse",&fqnse);
+    t->SetBranchAddress("fq1rt0",&fq1rt0);
     t->SetBranchAddress("fq1rpos",&fq1rpos);
     t->SetBranchAddress("fq1rdir",&fq1rdir);
     t->SetBranchAddress("fq1rnll",&fq1rnll);
@@ -73,11 +77,22 @@ void AnalyzeCosmicsMC(const char * fname="/eos/experiment/wcte/MC_Production/v1.
         pmt_posT[i] = pmtpos;
     }
 
+    ifstream maskFile(maks_file_name);
+    int cab_id;
+    std::vector<bool> mask_list(nPMTs_type0,false);
+    while (maskFile >> cab_id)
+    {
+        mask_list[cab_id] = true;
+        // std::cout<<"cab_id "<<cab_id<<" is masked\n";
+    }
+
+
     TH1D* hist_top = new TH1D("hist_top","hist_top",100,0,1);
     TH1D* hist_barrel = new TH1D("hist_barrel","hist_barrel",100,0,1);
     TH1D* hist_bottom = new TH1D("hist_bottom","hist_bottom",100,0,1);
-    TH1D* hist_totQ = new TH1D("hist_totQ","hist_totQ",100,0,20000);
+    TH1D* hist_totQ = new TH1D("hist_totQ","hist_totQ",100,0,10000);
     TH1D* hist_nhit = new TH1D("hist_nhit","hist_nhit",100,0,1843);
+    TH1D* hist_pe = new TH1D("hist_pe","hist_pe",1000,0,30);
     TH1D* hist_dir = new TH1D("hist_dir","hist_dir",100,-1,1);
 
     TH2D* hist_top_vs_dir = new TH2D("hist_top_vs_dir","hist_top_vs_dir",100,0,1,100,0,1);
@@ -94,7 +109,13 @@ void AnalyzeCosmicsMC(const char * fname="/eos/experiment/wcte/MC_Production/v1.
     TH2D* hist_fqexit = new TH2D("FQ_Exit_Pos","FQ_Exit_Pos",100,-TMath::Pi()*max_r,TMath::Pi()*max_r,100,-max_z-2*max_r,max_z+2*max_r);
     TH2D* hist_fqdirxy = new TH2D("FQ_Direction_Y_vs_X","FQ_Direction_Y_vs_X",100,-1,1,100,-1,1);
     TH1D* hist_fqdist = new TH1D("FQ_Dist","FQ_Dist",100,0,500);
+    TH1D* hist_fqdirz = new TH1D("FQ_Dirz","FQ_Dirz",100,0.5,1);
+    TH1D* hist_fqposz = new TH1D("pos_z","pos_z",100,-200,200);
     TH1D* hist_fqmom = new TH1D("FQ_Mom","FQ_Mom",100,0,1000);
+    TH2D* hist_fqmom_vs_Q = new TH2D("FQ_Mom_vs_Q","FQ_Mom_vs_Q",100,0,10000,100,400,1000);
+    TH1D* hist_fq_charge_over_dist = new TH1D("FQ_Charge_Over_Dist","FQ_Charge_Over_Dist",100,0,50);
+    TH1D* hist_fqnll = new TH1D("FQ_mu_e_likelihood","FQ_mu_e_likelihood",100,-1000,1000);
+    TH1D* hist_fq_hit_time = new TH1D("FQ_Hit_Time","FQ_Hit_Time",100,-10,40);
 
     TH1D* hist_fqentrance_diff = new TH1D("FQ_Entrance_Pos_Diff","FQ_Entrance_Pos_Diff",100,0,100);
     TH1D* hist_fqexit_diff = new TH1D("FQ_Exit_Pos_Diff","FQ_Exit_Pos_Diff",100,0,100);
@@ -180,22 +201,6 @@ void AnalyzeCosmicsMC(const char * fname="/eos/experiment/wcte/MC_Production/v1.
             triggerTime = triggerInfo[2];
         }
 
-        int nhits = 0;
-        double totQ = 0;
-        std::vector<double> pmt_hit(3,0.);
-        for (int i=0; i< wcsimrootevent->GetNcherenkovdigihits() ; i++)
-        {
-            WCSimRootCherenkovDigiHit* wcsimrootcherenkovdigihit = (WCSimRootCherenkovDigiHit*) (wcsimrootevent->GetCherenkovDigiHits())->At(i);
-            int tubeNumber     = wcsimrootcherenkovdigihit->GetTubeId()-1;
-            double peForTube      = wcsimrootcherenkovdigihit->GetQ();
-            double time = wcsimrootcherenkovdigihit->GetT()+triggerTime-triggerShift; // conversion from local digi time to global time
-
-            int cycloc = pmt_CylLoc[tubeNumber];
-            pmt_hit[cycloc] += peForTube;
-            nhits++;
-            totQ += peForTube;
-        }
-
         TVector3 fqVtx(fq1rpos[0][2][2],-fq1rpos[0][2][0],fq1rpos[0][2][1]);
         TVector3 fqDir(fq1rdir[0][2][2],-fq1rdir[0][2][0],fq1rdir[0][2][1]);
         bool fqtopdown = true;
@@ -232,14 +237,47 @@ void AnalyzeCosmicsMC(const char * fname="/eos/experiment/wcte/MC_Production/v1.
             displayBotYFQ = -max_z-max_r+botPt.x();
         }
 
+        int nhits = 0;
+        double totQ = 0;
+        std::vector<double> pmt_hit(3,0.);
+        std::vector<double> tof_corrected_time;
+        std::vector<double> pmt_charge;
+        for (int i=0; i< wcsimrootevent->GetNcherenkovdigihits() ; i++)
+        {
+            WCSimRootCherenkovDigiHit* wcsimrootcherenkovdigihit = (WCSimRootCherenkovDigiHit*) (wcsimrootevent->GetCherenkovDigiHits())->At(i);
+            int tubeNumber     = wcsimrootcherenkovdigihit->GetTubeId()-1;
+            double peForTube      = wcsimrootcherenkovdigihit->GetQ();
+            double time = wcsimrootcherenkovdigihit->GetT()+triggerTime-triggerShift; // conversion from local digi time to global time
+
+            if (mask_list[tubeNumber]) continue;
+            if (time>50) continue;
+            //if (peForTube>30) continue;
+
+            hist_pe->Fill(peForTube);
+
+            int cycloc = pmt_CylLoc[tubeNumber];
+            pmt_hit[cycloc] += peForTube;
+            nhits++;
+            totQ += peForTube;
+
+            double vg = 2.20027795333758801e8*100/1.e9; // rough speed of light in water in cm/ns
+            double vg_mu = 30; // rough speed of light in water in cm/ns
+            // Residual time
+            time -= fq1rt0[0][2] + (max_z-fqVtx.z())/fqDir.z()/vg_mu // fitted entrance time
+                    + (pmt_posT[tubeNumber]-TVector3(fq1rpos[0][2][0],fq1rpos[0][2][1],fq1rpos[0][2][2])).Mag()/vg; // photon time of flight from entrance point
+            
+            tof_corrected_time.push_back(time);
+            pmt_charge.push_back(peForTube);
+        }
+
         // selection based on observables
         if (applyselection)
         {
             if (pmt_hit[0]/totQ>0.07) continue;
-            if (pmt_hit[1]/totQ<0.38 || pmt_hit[1]/totQ>0.6) continue;
-            if (pmt_hit[2]/totQ<0.38 || pmt_hit[2]/totQ>0.6) continue;
+            if (pmt_hit[1]/totQ<0.45 || pmt_hit[1]/totQ>0.7) continue;
+            if (pmt_hit[2]/totQ<0.25 || pmt_hit[2]/totQ>0.5) continue;
             //if (totQ<6000 || totQ>10000) continue;
-            if (nhits<1000) continue;
+            if (nhits<700) continue;
             if (fqDir.z()>0) continue;
             if (!fqtopdown) continue;
         }
@@ -249,12 +287,16 @@ void AnalyzeCosmicsMC(const char * fname="/eos/experiment/wcte/MC_Production/v1.
         hist_bottom->Fill(pmt_hit[2]/totQ);  hist_bottom_vs_dir->Fill(dirz,pmt_hit[2]/totQ);
         hist_totQ->Fill(totQ); hist_totQ_vs_dir->Fill(dirz,totQ);
         hist_dir->Fill(dirz);
+        hist_fqposz->Fill(fqVtx.z());
         hist_entrance->Fill(displayTopX,displayTopY);
         hist_exit->Fill(displayBotX,displayBotY);
         hist_dist->Fill((entrance_truth-exit_truth).Mag()); 
         hist_fqmom->Fill(fq1rmom[0][2]);
+        hist_fqmom_vs_Q->Fill(totQ,fq1rmom[0][2]);
+        hist_fqnll->Fill(fq1rnll[0][1]-fq1rnll[0][2]);
 
         hist_fqdirxy->Fill(fqDir.x(),fqDir.y());
+        hist_fqdirz->Fill(-fqDir.z());
         hist_fqentrance->Fill(displayTopXFQ,displayTopYFQ);
         hist_fqexit->Fill(displayBotXFQ,displayBotYFQ);
         hist_fqdist->Fill((topPt-botPt).Mag());
@@ -263,6 +305,8 @@ void AnalyzeCosmicsMC(const char * fname="/eos/experiment/wcte/MC_Production/v1.
         hist_fqexit_diff->Fill((botPt-exit_truth).Mag());
         hist_fqdir_diff->Fill(fqDir.Dot(dir_truth));
         hist_fqdist_diff->Fill((topPt-botPt).Mag()-(entrance_truth-exit_truth).Mag());
+        hist_fq_charge_over_dist->Fill(totQ/(topPt-botPt).Mag());
+        for (int j=0;j<tof_corrected_time.size();j++) hist_fq_hit_time->Fill(tof_corrected_time[j],pmt_charge[j]);
 
         count_selected++;
         if (topdown) count_topdown++;
@@ -287,6 +331,24 @@ void AnalyzeCosmicsMC(const char * fname="/eos/experiment/wcte/MC_Production/v1.
     gPad->SaveAs(Form("fig/pmt_totQ%s.pdf",suffix));
     hist_nhit->Draw();
     gPad->SaveAs(Form("fig/pmt_nhit%s.pdf",suffix));
+    hist_pe->Draw();
+    gPad->SaveAs(Form("fig/pmt_pe%s.pdf",suffix));
+    // cumulative histogram
+    TH1D *hqcum = (TH1D*)hist_pe->Clone("hist_pe_cum");
+    hqcum->Reset(); // keep binning but empty content
+    hqcum->SetTitle("PE Cumulative distribution");
+
+    double totalq = hist_pe->Integral(0, hist_pe->GetNbinsX()+1); // include under/overflow
+    double sumq = 0.0;
+
+    for (int i = 1; i <= hist_pe->GetNbinsX(); ++i) {
+        sumq += hist_pe->GetBinContent(i);
+        hqcum->SetBinContent(i, sumq / totalq); // normalized CDF
+    }
+    hqcum->Draw();
+    gPad->SetGridx();
+    gPad->SetGridy();
+    gPad->SaveAs(Form("fig/pmt_pe_cum%s.pdf",suffix));
 
     hist_top_vs_dir->Draw("colz");
     gPad->SaveAs(Form("fig/pmt_top_vs_dir%s.pdf",suffix));
@@ -343,4 +405,16 @@ void AnalyzeCosmicsMC(const char * fname="/eos/experiment/wcte/MC_Production/v1.
     gPad->SaveAs(Form("fig/fq_dir_diff%s.pdf",suffix));
     hist_fqdist_diff->Draw();
     gPad->SaveAs(Form("fig/fq_dist_diff%s.pdf",suffix));
+    hist_fqmom_vs_Q->Draw("colz");
+    gPad->SaveAs(Form("fig/fq_mom_vs_Q%s.pdf",suffix));
+    hist_fq_charge_over_dist->Draw();
+    gPad->SaveAs(Form("fig/fq_charge_over_dist%s.pdf",suffix));
+    hist_fqdirz->Draw();
+    gPad->SaveAs(Form("fig/fq_dirz%s.pdf",suffix));
+    hist_fqposz->Draw();
+    gPad->SaveAs(Form("fig/fq_posz%s.pdf",suffix));
+    hist_fqnll->Draw();
+    gPad->SaveAs(Form("fig/fq_nll%s.pdf",suffix));
+    hist_fq_hit_time->Draw("hist");
+    gPad->SaveAs(Form("fig/fq_tof%s.pdf",suffix));
 }

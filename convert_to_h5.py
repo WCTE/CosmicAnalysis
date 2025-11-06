@@ -15,7 +15,7 @@ def usage():
     '''
     print ("Demo script to convert wcsim.root to h5")
     print ("Usage:")
-    print ("convert_to_h5.py [-h] [-f <wcsim_file_to_convert>] [-q <fiTQun_file>] [-o <output_filename>]")
+    print ("convert_to_h5.py [-h] [-f <wcsim_file_to_convert>] [-q <fiTQun_file>] [-o <output_filename>] [-m <mask_file>]")
     print ("")
     print ("Options:")
     print ("-h, --help: prints help message")
@@ -28,11 +28,12 @@ def convert_to_h5():
 
     fname = None
     fqname= None
+    mask_file_name = "maskFile_1766.txt"
     fout = 'out.h5'
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hf:o:q:",
-                                   ["help", "file=" , "fqfile=", "out="])
+        opts, args = getopt.getopt(sys.argv[1:], "hf:o:q:m:",
+                                   ["help", "file=" , "fqfile=", "out=", "mask="])
     except getopt.GetoptError as err:
         print (str(err))
         usage()
@@ -44,10 +45,15 @@ def convert_to_h5():
             sys.exit()
         if (opt in ("-f", "--file")):
             fname = val.strip()
+            print(f"fname =  {fname}")
         if (opt in ("-q", "--fqfile")):
             fqname = val.strip()
+            print(f"fqname =  {fqname}")
         if (opt in ("-o", "--out")):
             fout = val.strip()
+        if (opt in ("-m", "--mask")):
+            mask_file_name = val.strip()
+            print(f"mask_file_name =  {mask_file_name}")
 
     if fname == None:
         print("Missing wcsim input file!!")
@@ -88,6 +94,14 @@ def convert_to_h5():
     chainFQ.Add(fqname)
     chain.AddFriend(chainFQ)
 
+    # PMT bad channel list
+    mask_list = [False] * npmts
+    with open(mask_file_name, 'r') as maskFile:
+        for line in maskFile:
+            cab_id = int(line.strip())
+            mask_list[cab_id] = True
+            # print(f"cab_id {cab_id} is masked")
+
     nevents = chain.GetEntries()
     print("number of entries in the tree: " + str(nevents))
     chain.GetEvent(0)
@@ -101,6 +115,7 @@ def convert_to_h5():
     momentum = np.zeros(nevents,dtype=np.float32)
     pmtQ = np.zeros((nevents,npmts),dtype=np.float32)
     pmtT = np.zeros((nevents,npmts),dtype=np.float32)
+    fq_pos = np.zeros((nevents,4),dtype=np.float32)
     fq_entrance_pos = np.zeros((nevents,3),dtype=np.float32)
     fq_exit_pos = np.zeros((nevents,3),dtype=np.float32)
     fq_direction = np.zeros((nevents,3),dtype=np.float32)
@@ -145,6 +160,8 @@ def convert_to_h5():
         for hit in trigger.GetCherenkovDigiHits():
             if hit.GetT()<100:
                 pmt_id = hit.GetTubeId() - 1
+                if mask_list[pmt_id]:
+                    continue
                 q = hit.GetQ()
                 pmtQ[i][pmt_id] = pmtQ[i][pmt_id]+q
                 if pmtT[i][pmt_id]<=0:
@@ -157,6 +174,7 @@ def convert_to_h5():
         fq1rpos = chain.fq1rpos  # expected nested array: [eventIndex][fitIndex][xyz]
         fq1rdir = chain.fq1rdir
         fq1rmom = chain.fq1rmom
+        fq1rt0  = chain.fq1rt0
 
         fqtopdown = True
         fqVtx = ROOT.TVector3(fq1rpos[2*3+0]*10, -fq1rpos[2*3+2]*10, fq1rpos[2*3+1]*10)
@@ -180,6 +198,7 @@ def convert_to_h5():
                     botPt = botPt - fqDir
                 fqtopdown = False
 
+        fq_pos[i] = np.array([fqVtx.X(),fqVtx.Y(),fqVtx.Z(),fq1rt0[2]], dtype=np.float32)
         fq_entrance_pos[i] = np.array([topPt.X(),topPt.Y(),topPt.Z()], dtype=np.float32)
         fq_exit_pos[i] = np.array([botPt.X(),botPt.Y(),botPt.Z()], dtype=np.float32)
         fq_direction[i] = np.array([fqDir.X(),fqDir.Y(),fqDir.Z()], dtype=np.float32)
@@ -190,11 +209,11 @@ def convert_to_h5():
         else:
             if pmt_hit[0]/totQ > 0.07:
                 pass_selection[i] = False
-            if pmt_hit[1]/totQ < 0.38 or pmt_hit[1]/totQ > 0.6:
+            if pmt_hit[1]/totQ < 0.45 or pmt_hit[1]/totQ > 0.7:
                 pass_selection[i] = False
-            if pmt_hit[2]/totQ < 0.38 or pmt_hit[2]/totQ > 0.6:
+            if pmt_hit[2]/totQ < 0.25 or pmt_hit[2]/totQ > 0.5:
                 pass_selection[i] = False
-            if nhits < 1000:
+            if nhits < 700:
                 pass_selection[i] = False
             if fqDir.Z() > 0:
                 pass_selection[i] = False
@@ -219,6 +238,7 @@ def convert_to_h5():
         h5fw.create_dataset('momentum', data=momentum)
         h5fw.create_dataset('pmtQ', data=pmtQ)
         h5fw.create_dataset('pmtT', data=pmtT)
+        h5fw.create_dataset('fq_pos', data=fq_pos)
         h5fw.create_dataset('fq_entrance_pos', data=fq_entrance_pos)
         h5fw.create_dataset('fq_exit_pos', data=fq_exit_pos)
         h5fw.create_dataset('fq_direction', data=fq_direction)
