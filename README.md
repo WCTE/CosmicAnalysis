@@ -67,8 +67,9 @@ with h5py.File('wcte_cosmics_mc.h5','r') as f:
 ```
 
 ## Data
-To search for cosmic muons in data, a 50 ns moving time window is used with a number of hit threshold (N50) equal to 1000. Then the same charge ratio cuts (top/barrel/bottom over total charge) are applied. After that, the candidate event PMT hit information is written in a WCSim-like format for fiTQun processing.
+### SelectCosmicCandidate.c
+To search for cosmic muons in data, a 50 ns moving time window is used with a number of hit threshold (N50) equal to 700. Then the same charge ratio cuts (top/barrel/bottom over total charge) are applied. After that, the candidate event PMT hit information is written in a WCSim-like format for fiTQun processing.
 
-In run 1766, which is a background run in pure water phase, there are 442k events with each event spanning 500 $\mu s$, giving a total live time of 211s. 1403 muon candidates are found. 
+In run 1766, which is a background run in pure water phase, there are 442k events with each event spanning 500 $\mu s$, giving a total live time of 211s. 80358 muon candidates are found. 
 
 After fITQun processing, the reconstructed entrance/exit point cuts are applied, and 948 muon candidates remain.
