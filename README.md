@@ -14,13 +14,16 @@ To mimic the effect of reduced PMT efficiency observed in [through going beam mu
 ### Bad channel list
 To create bad channel list per run, the `good_wcte_pmts` list in the metadata and the actual run data are used.
 ```
-root -l -b -q CreateBadChannelList.c
+root -l -b -q CreateBadChannelList.c\(1766\)
 ```
+This creates the bad channel list for run 1766.
 
-### AnalyzeCosmicsMC.c
+### AnalyzeCosmics.c
 To select muons that enter through the top cap and exit through the bottom cap, create a set of plots in `fig/` to study cut values on number of PMT hits and charge ratios in different sections (top cap, barrel, bottom cap).
 ```
-root -l -b -q AnalyzeCosmicsMC.c
+root -l -b -q AnalyzeCosmics.c\(false,false\)
+root -l -b -q AnalyzeCosmics.c\(false,true\)
+root -l -b -q AnalyzeCosmics.c\(true,false\)
 ```
 Then we derive a set of selection cuts:
 - number of PMT hits > 700
@@ -72,4 +75,8 @@ To search for cosmic muons in data, a 50 ns moving time window is used with a nu
 
 In run 1766, which is a background run in pure water phase, there are 442k events with each event spanning 500 $\mu s$, giving a total live time of 211s. 80358 muon candidates are found. 
 
-After fITQun processing, the reconstructed entrance/exit point cuts are applied, and 948 muon candidates remain.
+### AnalyzeCosmics.c
+After fITQun processing, the reconstructed entrance/exit point cuts are applied, and 51093 muon candidates remain.
+```
+root -l -b -q AnalyzeCosmics.c\(true,false,false,\"out_1766.root\",\"1766/fq_00*.root\",\"_1766\"\)
+```

@@ -1,13 +1,19 @@
 R__LOAD_LIBRARY($WCSIM_BUILD_DIR/lib/libWCSimRoot.so)
 
-void AnalyzeCosmicsMC(
+void AnalyzeCosmics(
+    bool applyselection=true, bool topdownonly = false, bool isMC = true,
     const char * fname= "/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/mdt/mdt_cosmics_00*.root", 
     const char * fqname="/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/mdt/fiTQun/fq_00*.root", 
-    bool topdownonly = false, bool applyselection=true, const char * maks_file_name="maskFile_1766.txt"
+    std::string suffix_string = "_MC", const char * maks_file_name="maskFile_1766.txt"
 )
 {
     // gStyle->SetOptStat(0);
 
+    if (topdownonly) suffix_string += "_topdown";
+    if (applyselection) suffix_string += "_selected";
+    char* suffix = (char*)suffix_string.c_str();
+
+    // Read WCSim flles
     TChain *t = new TChain("wcsimT");
     t->Add(fname);
     std::string single_file_name = t->GetFile()->GetName();
@@ -22,6 +28,7 @@ void AnalyzeCosmicsMC(
     WCSimRootEvent* wcsimrootsuperevent = new WCSimRootEvent();
     t->SetBranchAddress("wcsimrootevent",&wcsimrootsuperevent);
 
+    // Read fiTQun files
     TChain *tFQ = new TChain("fiTQun");
     tFQ->Add(fqname);
     t->AddFriend(tFQ);
@@ -51,13 +58,13 @@ void AnalyzeCosmicsMC(
         exit(9);
     }
     geotree->GetEntry(0);
-    int nPMTs_type0=geo->GetWCNumPMT();
-    std::cout << "geo has " << nPMTs_type0 << " PMTs" << std::endl;
-    std::vector<TVector3> pmt_posT(nPMTs_type0);
-    std::vector<int> pmt_CylLoc(nPMTs_type0);
-    std::vector<int> mPMTNo(nPMTs_type0);
-    std::vector<int> mPMT_PMTNo(nPMTs_type0);
-    for (int i=0;i<nPMTs_type0;i++) 
+    int nPMTs=geo->GetWCNumPMT();
+    std::cout << "geo has " << nPMTs << " PMTs" << std::endl;
+    std::vector<TVector3> pmt_posT(nPMTs);
+    std::vector<int> pmt_CylLoc(nPMTs);
+    std::vector<int> mPMTNo(nPMTs);
+    std::vector<int> mPMT_PMTNo(nPMTs);
+    for (int i=0;i<nPMTs;i++) 
     {
         WCSimRootPMT pmt;
         pmt = geo->GetPMT(i);
@@ -79,7 +86,7 @@ void AnalyzeCosmicsMC(
 
     ifstream maskFile(maks_file_name);
     int cab_id;
-    std::vector<bool> mask_list(nPMTs_type0,false);
+    std::vector<bool> mask_list(nPMTs,false);
     while (maskFile >> cab_id)
     {
         mask_list[cab_id] = true;
@@ -140,67 +147,65 @@ void AnalyzeCosmicsMC(
         double dirz = -999;
         double displayTopX,displayTopY,displayBotX,displayBotY;
         TVector3 entrance_truth, exit_truth, dir_truth;
-        for (int i=0;i<wcsimrootevent->GetNtrack();i++)
+
+        // Truth info from MC
+        if (isMC)
         {
-            WCSimRootTrack* trk = (WCSimRootTrack*)wcsimrootevent->GetTracks()->At(i);
-            if (trk->GetId()==1) // select primary track to get vertex and direction
+            for (int i=0;i<wcsimrootevent->GetNtrack();i++)
             {
-                dirz = -trk->GetDir(1);
-
-                std::vector<std::vector<float>> bp = trk->GetBoundaryPoints();
-                std::vector<int> bt = trk->GetBoundaryTypes();
-                int last_idx = bp.size()-1;
-                if (last_idx<0) break; // muon does not enter the ID
-                bool topcap = false;
-                TVector3 topPt(bp[0][2]/10.,-bp[0][0]/10.,bp[0][1]/10.);
-                displayTopX = -topPt.y();
-                displayTopY = max_z+max_r-topPt.x();
-                if (bt[0]==1 && topPt.z()>max_z) topcap=true; // enter through top cap blacksheet
-                else if (bt[0]==2 && topPt.z()>max_z-10) topcap=true; // enter through top cap mPMT
-                else
+                WCSimRootTrack* trk = (WCSimRootTrack*)wcsimrootevent->GetTracks()->At(i);
+                if (trk->GetId()==1) // select primary track to get vertex and direction
                 {
-                    double th = atan2(topPt.y(),topPt.x());
-                    displayTopX = -max_r*th;
-                    displayTopY = topPt.z();
+                    dirz = -trk->GetDir(1);
+
+                    std::vector<std::vector<float>> bp = trk->GetBoundaryPoints();
+                    std::vector<int> bt = trk->GetBoundaryTypes();
+                    int last_idx = bp.size()-1;
+                    if (last_idx<0) break; // muon does not enter the ID
+                    bool topcap = false;
+                    TVector3 topPt(bp[0][2]/10.,-bp[0][0]/10.,bp[0][1]/10.);
+                    displayTopX = -topPt.y();
+                    displayTopY = max_z+max_r-topPt.x();
+                    if (bt[0]==1 && topPt.z()>max_z) topcap=true; // enter through top cap blacksheet
+                    else if (bt[0]==2 && topPt.z()>max_z-10) topcap=true; // enter through top cap mPMT
+                    else
+                    {
+                        double th = atan2(topPt.y(),topPt.x());
+                        displayTopX = -max_r*th;
+                        displayTopY = topPt.z();
+                    }
+                    entrance_truth = topPt;
+                    TVector3 botPt(bp[last_idx][2]/10.,-bp[last_idx][0]/10.,bp[last_idx][1]/10.);
+                    displayBotX = -botPt.y();
+                    displayBotY = -max_z-max_r+botPt.x();
+                    bool botcap = false;
+                    if (bt[last_idx]==1 && botPt.z()<-max_z) botcap=true; // exit through bottom cap blacksheet
+                    else if (bt[last_idx]==2 && botPt.z()<-max_z+10) botcap=true; // exit through bottom cap mPMT
+                    else
+                    {
+                        double th = atan2(botPt.y(),botPt.x());
+                        displayBotX = -max_r*th;
+                        displayBotY = botPt.z();
+                    }
+                    exit_truth = botPt;
+
+                    dir_truth = (exit_truth-entrance_truth).Unit();
+
+                    if (topcap && botcap) topdown=true;
+
+                    // if (topdown) std::cout<<bp[0][0]<<" "<<bp[0][1]<<" "<<bp[0][2]<<" "<<bp[last_idx][0]<<" "<<bp[last_idx][1]<<" "<<bp[last_idx][2]<<"\n";
+                    break;
                 }
-                entrance_truth = topPt;
-                TVector3 botPt(bp[last_idx][2]/10.,-bp[last_idx][0]/10.,bp[last_idx][1]/10.);
-                displayBotX = -botPt.y();
-                displayBotY = -max_z-max_r+botPt.x();
-                bool botcap = false;
-                if (bt[last_idx]==1 && botPt.z()<-max_z) botcap=true; // exit through bottom cap blacksheet
-                else if (bt[last_idx]==2 && botPt.z()<-max_z+10) botcap=true; // exit through bottom cap mPMT
-                else
-                {
-                    double th = atan2(botPt.y(),botPt.x());
-                    displayBotX = -max_r*th;
-                    displayBotY = botPt.z();
-                }
-                exit_truth = botPt;
-
-                dir_truth = (exit_truth-entrance_truth).Unit();
-
-                if (topcap && botcap) topdown=true;
-
-                // if (topdown) std::cout<<bp[0][0]<<" "<<bp[0][1]<<" "<<bp[0][2]<<" "<<bp[last_idx][0]<<" "<<bp[last_idx][1]<<" "<<bp[last_idx][2]<<"\n";
-                break;
             }
+
+            // skip bad events
+            if ((entrance_truth-exit_truth).Mag()<50)  continue;
+
+            // select true top-down events if necessary
+            if (topdownonly && !topdown) continue;
         }
 
-        // skip bad events
-        if ((entrance_truth-exit_truth).Mag()<50)  continue;
-
-        // select true top-down events if necessary
-        if (topdownonly && !topdown) continue;
-
-        std::vector<double> triggerInfo = wcsimrootevent->GetTriggerInfo();
-        double triggerShift=0, triggerTime=0;
-        if(wcsimrootevent->GetTriggerType()!=kTriggerNoTrig && triggerInfo.size()>=3)
-        {
-            triggerShift = triggerInfo[1];
-            triggerTime = triggerInfo[2];
-        }
-
+        // fiTQun vertex and direction
         TVector3 fqVtx(fq1rpos[0][2][2],-fq1rpos[0][2][0],fq1rpos[0][2][1]);
         TVector3 fqDir(fq1rdir[0][2][2],-fq1rdir[0][2][0],fq1rdir[0][2][1]);
         bool fqtopdown = true;
@@ -237,6 +242,7 @@ void AnalyzeCosmicsMC(
             displayBotYFQ = -max_z-max_r+botPt.x();
         }
 
+        // Hit info
         int nhits = 0;
         double totQ = 0;
         std::vector<double> pmt_hit(3,0.);
@@ -247,10 +253,10 @@ void AnalyzeCosmicsMC(
             WCSimRootCherenkovDigiHit* wcsimrootcherenkovdigihit = (WCSimRootCherenkovDigiHit*) (wcsimrootevent->GetCherenkovDigiHits())->At(i);
             int tubeNumber     = wcsimrootcherenkovdigihit->GetTubeId()-1;
             double peForTube      = wcsimrootcherenkovdigihit->GetQ();
-            double time = wcsimrootcherenkovdigihit->GetT()+triggerTime-triggerShift; // conversion from local digi time to global time
+            double time = wcsimrootcherenkovdigihit->GetT(); 
 
-            if (mask_list[tubeNumber]) continue;
-            if (time>50) continue;
+            if (mask_list[tubeNumber]) continue; // remove masked PMTs
+            if (time-fq1rt0[0][2]>50) continue; // remove late hits
             //if (peForTube>30) continue;
 
             hist_pe->Fill(peForTube);
@@ -281,16 +287,30 @@ void AnalyzeCosmicsMC(
             if (fqDir.z()>0) continue;
             if (!fqtopdown) continue;
         }
-        hist_nhit->Fill(nhits); hist_nhit_vs_dir->Fill(dirz,nhits);
-        hist_top->Fill(pmt_hit[0]/totQ); hist_top_vs_dir->Fill(dirz,pmt_hit[0]/totQ);
-        hist_barrel->Fill(pmt_hit[1]/totQ);  hist_barrel_vs_dir->Fill(dirz,pmt_hit[1]/totQ);
-        hist_bottom->Fill(pmt_hit[2]/totQ);  hist_bottom_vs_dir->Fill(dirz,pmt_hit[2]/totQ);
-        hist_totQ->Fill(totQ); hist_totQ_vs_dir->Fill(dirz,totQ);
-        hist_dir->Fill(dirz);
+
+        if (isMC)
+        {
+            hist_nhit_vs_dir->Fill(dirz,nhits);
+            hist_top_vs_dir->Fill(dirz,pmt_hit[0]/totQ);
+            hist_barrel_vs_dir->Fill(dirz,pmt_hit[1]/totQ);
+            hist_bottom_vs_dir->Fill(dirz,pmt_hit[2]/totQ);
+            hist_totQ_vs_dir->Fill(dirz,totQ);
+            hist_dir->Fill(dirz);
+            hist_entrance->Fill(displayTopX,displayTopY);
+            hist_exit->Fill(displayBotX,displayBotY);
+            hist_dist->Fill((entrance_truth-exit_truth).Mag()); 
+            hist_fqentrance_diff->Fill((topPt-entrance_truth).Mag());
+            hist_fqexit_diff->Fill((botPt-exit_truth).Mag());
+            hist_fqdir_diff->Fill(fqDir.Dot(dir_truth));
+            hist_fqdist_diff->Fill((topPt-botPt).Mag()-(entrance_truth-exit_truth).Mag());
+        }
+        
+        hist_nhit->Fill(nhits); 
+        hist_top->Fill(pmt_hit[0]/totQ); 
+        hist_barrel->Fill(pmt_hit[1]/totQ);  
+        hist_bottom->Fill(pmt_hit[2]/totQ);  
+        hist_totQ->Fill(totQ); 
         hist_fqposz->Fill(fqVtx.z());
-        hist_entrance->Fill(displayTopX,displayTopY);
-        hist_exit->Fill(displayBotX,displayBotY);
-        hist_dist->Fill((entrance_truth-exit_truth).Mag()); 
         hist_fqmom->Fill(fq1rmom[0][2]);
         hist_fqmom_vs_Q->Fill(totQ,fq1rmom[0][2]);
         hist_fqnll->Fill(fq1rnll[0][1]-fq1rnll[0][2]);
@@ -301,10 +321,6 @@ void AnalyzeCosmicsMC(
         hist_fqexit->Fill(displayBotXFQ,displayBotYFQ);
         hist_fqdist->Fill((topPt-botPt).Mag());
 
-        hist_fqentrance_diff->Fill((topPt-entrance_truth).Mag());
-        hist_fqexit_diff->Fill((botPt-exit_truth).Mag());
-        hist_fqdir_diff->Fill(fqDir.Dot(dir_truth));
-        hist_fqdist_diff->Fill((topPt-botPt).Mag()-(entrance_truth-exit_truth).Mag());
         hist_fq_charge_over_dist->Fill(totQ/(topPt-botPt).Mag());
         for (int j=0;j<tof_corrected_time.size();j++) hist_fq_hit_time->Fill(tof_corrected_time[j],pmt_charge[j]);
 
@@ -315,10 +331,6 @@ void AnalyzeCosmicsMC(
     std::cout<<"Number of selected muons = "<<count_selected<<std::endl;
     std::cout<<"Number of true top-down muons = "<<count_topdown<<std::endl;
 
-    std::string suffix_string = "";
-    if (topdownonly) suffix_string += "_topdown";
-    if (applyselection) suffix_string += "_selected";
-    char* suffix = (char*)suffix_string.c_str();
     if (gSystem->AccessPathName("fig")) gSystem->mkdir("fig");
 
     hist_top->Draw();
@@ -350,41 +362,52 @@ void AnalyzeCosmicsMC(
     gPad->SetGridy();
     gPad->SaveAs(Form("fig/pmt_pe_cum%s.pdf",suffix));
 
-    hist_top_vs_dir->Draw("colz");
-    gPad->SaveAs(Form("fig/pmt_top_vs_dir%s.pdf",suffix));
-    hist_barrel_vs_dir->Draw("colz");
-    gPad->SaveAs(Form("fig/pmt_barrel_vs_dir%s.pdf",suffix));
-    hist_bottom_vs_dir->Draw("colz");
-    gPad->SaveAs(Form("fig/pmt_bottom_vs_dir%s.pdf",suffix));
-    hist_totQ_vs_dir->Draw("colz");
-    gPad->SaveAs(Form("fig/pmt_totQ_vs_dir%s.pdf",suffix));
-    hist_nhit_vs_dir->Draw("colz");
-    gPad->SaveAs(Form("fig/pmt_nhit_vs_dir%s.pdf",suffix));
+    if (isMC)
+    {
+        hist_top_vs_dir->Draw("colz");
+        gPad->SaveAs(Form("fig/pmt_top_vs_dir%s.pdf",suffix));
+        hist_barrel_vs_dir->Draw("colz");
+        gPad->SaveAs(Form("fig/pmt_barrel_vs_dir%s.pdf",suffix));
+        hist_bottom_vs_dir->Draw("colz");
+        gPad->SaveAs(Form("fig/pmt_bottom_vs_dir%s.pdf",suffix));
+        hist_totQ_vs_dir->Draw("colz");
+        gPad->SaveAs(Form("fig/pmt_totQ_vs_dir%s.pdf",suffix));
+        hist_nhit_vs_dir->Draw("colz");
+        gPad->SaveAs(Form("fig/pmt_nhit_vs_dir%s.pdf",suffix));
 
-    hist_dir->Draw();
-    gPad->SaveAs(Form("fig/muon_dir%s.pdf",suffix));
-    hist_entrance->Draw("colz");
-    gPad->SaveAs(Form("fig/muon_entrance%s.pdf",suffix));
-    hist_exit->Draw("colz");
-    gPad->SaveAs(Form("fig/muon_exit%s.pdf",suffix));
-    hist_dist->Draw();
-    gPad->SaveAs(Form("fig/muon_dist%s.pdf",suffix));
+        hist_dir->Draw();
+        gPad->SaveAs(Form("fig/muon_dir%s.pdf",suffix));
+        hist_entrance->Draw("colz");
+        gPad->SaveAs(Form("fig/muon_entrance%s.pdf",suffix));
+        hist_exit->Draw("colz");
+        gPad->SaveAs(Form("fig/muon_exit%s.pdf",suffix));
+        hist_dist->Draw();
+        gPad->SaveAs(Form("fig/muon_dist%s.pdf",suffix));
 
-    // cumulative histogram
-    TH1D *hcum = (TH1D*)hist_dir->Clone("hist_dir_cum");
-    hcum->Reset(); // keep binning but empty content
-    hcum->SetTitle("Dirz Cumulative distribution");
+        // cumulative histogram
+        TH1D *hcum = (TH1D*)hist_dir->Clone("hist_dir_cum");
+        hcum->Reset(); // keep binning but empty content
+        hcum->SetTitle("Dirz Cumulative distribution");
 
-    double total = hist_dir->Integral(0, hist_dir->GetNbinsX()+1); // include under/overflow
-    double sum = 0.0;
+        double total = hist_dir->Integral(0, hist_dir->GetNbinsX()+1); // include under/overflow
+        double sum = 0.0;
 
-    for (int i = 1; i <= hist_dir->GetNbinsX(); ++i) {
-        sum += hist_dir->GetBinContent(i);
-        hcum->SetBinContent(i, sum / total); // normalized CDF
+        for (int i = 1; i <= hist_dir->GetNbinsX(); ++i) {
+            sum += hist_dir->GetBinContent(i);
+            hcum->SetBinContent(i, sum / total); // normalized CDF
+        }
+        hcum->Draw();
+        gPad->SaveAs(Form("fig/muon_dir_cum%s.pdf",suffix));
+
+        hist_fqentrance_diff->Draw();
+        gPad->SaveAs(Form("fig/fq_entrance_diff%s.pdf",suffix));
+        hist_fqexit_diff->Draw();
+        gPad->SaveAs(Form("fig/fq_exit_diff%s.pdf",suffix));
+        hist_fqdir_diff->Draw();
+        gPad->SaveAs(Form("fig/fq_dir_diff%s.pdf",suffix));
+        hist_fqdist_diff->Draw();
+        gPad->SaveAs(Form("fig/fq_dist_diff%s.pdf",suffix));
     }
-    hcum->Draw();
-    gPad->SaveAs(Form("fig/muon_dir_cum%s.pdf",suffix));
-
 
     hist_fqentrance->Draw("colz");
     gPad->SaveAs(Form("fig/fq_entrance_pos%s.pdf",suffix));
@@ -397,14 +420,6 @@ void AnalyzeCosmicsMC(
     hist_fqmom->Draw("");
     gPad->SaveAs(Form("fig/fq_mom%s.pdf",suffix));
 
-    hist_fqentrance_diff->Draw();
-    gPad->SaveAs(Form("fig/fq_entrance_diff%s.pdf",suffix));
-    hist_fqexit_diff->Draw();
-    gPad->SaveAs(Form("fig/fq_exit_diff%s.pdf",suffix));
-    hist_fqdir_diff->Draw();
-    gPad->SaveAs(Form("fig/fq_dir_diff%s.pdf",suffix));
-    hist_fqdist_diff->Draw();
-    gPad->SaveAs(Form("fig/fq_dist_diff%s.pdf",suffix));
     hist_fqmom_vs_Q->Draw("colz");
     gPad->SaveAs(Form("fig/fq_mom_vs_Q%s.pdf",suffix));
     hist_fq_charge_over_dist->Draw();
