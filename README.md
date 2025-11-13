@@ -4,9 +4,8 @@ ROOT-based analysis to study cosmic muons.
 ## MC
 A through-going cosmic muon sample is stored at `/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/`. The production and analysis environment can be accessed by
 ```
-/eos/experiment/wcte/MC_Production/ContainerImage/run_container.sh /eos/experiment/wcte/MC_Production/ContainerImage/softwarecontainer_workshop.sif
+/eos/experiment/wcte/MC_Production/ContainerImage/run_container.sh /eos/experiment/wcte/MC_Production/ContainerImage/softwarecontainer_v1.4.2.sif
 ```
-fiTQun reconstruction is run on this sample, and the output is stored in `/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/fiTQun/`.
 
 ### mPMT efficiency difference
 To mimic the effect of reduced PMT efficiency observed in [through going beam muons](https://wcte.hyperk.ca/wg/simulation-and-analysis/meetings/2025/20250925/meeting/studying-mpmt-efficiencies-using-crossing-muon-sample/crossingmuonstudy.pdf), [MDT](https://github.com/hyperk/MDT/tree/angular_response_gain) is used to reprocess the MC data. An ad-hoc detection efficiency factor (relative to WCSim) of 45% is applied on WUT ex-situ mPMTs, and 90% otherwise. Waveform simulation and hit finding are also applied based on self-trigger conditions.
@@ -18,8 +17,10 @@ root -l -b -q CreateBadChannelList.c\(1766\)
 ```
 This creates the bad channel list for run 1766.
 
+fiTQun reconstruction is run with the bad channel being masked, and the output is stored in `/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/mdt/fiTQun/`.
+
 ### AnalyzeCosmics.c
-To select muons that enter through the top cap and exit through the bottom cap, create a set of plots in `fig/` to study cut values on number of PMT hits and charge ratios in different sections (top cap, barrel, bottom cap).
+To select muons that enter through the top cap and exit through the bottom cap, a set of plots is created in `fig/` to study cut values on number of PMT hits and charge ratios in different sections (top cap, barrel, bottom cap).
 ```
 root -l -b -q AnalyzeCosmics.c\(false,false\)
 root -l -b -q AnalyzeCosmics.c\(false,true\)
@@ -75,8 +76,11 @@ To search for cosmic muons in data, a 50 ns moving time window is used with a nu
 
 In run 1766, which is a background run in pure water phase, there are 442k events with each event spanning 500 $\mu s$, giving a total live time of 211s. 80358 muon candidates are found. 
 
+The selected muon candidates and fiTQun outputs are stored in `/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/run1766/`.
+
 ### AnalyzeCosmics.c
-After fITQun processing, the reconstructed entrance/exit point cuts are applied, and 51093 muon candidates remain.
+After the fiTQun reconstructed entrance/exit point cuts are applied, 51093 muon candidates remain.
 ```
-root -l -b -q AnalyzeCosmics.c\(true,false,false,\"out_1766.root\",\"1766/fq_00*.root\",\"_1766\"\)
+root -l -b -q AnalyzeCosmics.c\(true,false,false,\"/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/run1766/out_1766.root\",\"/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/run1766/fq_00*.root\",\"_1766\"\)
 ```
+From [MC studies](https://wcte.hyperk.ca/wg/simulation-and-analysis/meetings/2025/20251009/meeting/cosmic-muon-selection/wcte_cosmics_20251010.pdf), the fiTQun resolution on entrance and exit points are better than 20 cm. This is also cross-checked with [beam crossing muon sample](https://wcte.hyperk.ca/wg/calibration/meetings/2025/20251110/meeting/fitqun-performance-on-beam-crossing-muon/fitqun_performance_on_beam_crossing_muon_20251110.pdf), which shows reasonable agreement between MC and data.
