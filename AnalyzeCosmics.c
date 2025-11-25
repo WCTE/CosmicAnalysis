@@ -2,9 +2,9 @@ R__LOAD_LIBRARY($WCSIM_BUILD_DIR/lib/libWCSimRoot.so)
 
 void AnalyzeCosmics(
     bool applyselection=true, bool topdownonly = false, bool isMC = true,
-    const char * fname= "/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/mdt/mdt_cosmics_00*.root", 
-    const char * fqname="/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/mdt/fiTQun/fq_00*.root", 
-    std::string suffix_string = "_MC", const char * maks_file_name="maskFile_1766.txt"
+    const char * fname= "/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/mdt_reduced_eff/mdt_cosmics_00*.root", 
+    const char * fqname="/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/mdt_reduced_eff/fiTQun/fq_00*.root", 
+    std::string suffix_string = "_MC", const char * mask_file_name="maskFile_1766.txt"
 )
 {
     // gStyle->SetOptStat(0);
@@ -12,6 +12,8 @@ void AnalyzeCosmics(
     if (topdownonly) suffix_string += "_topdown";
     if (applyselection) suffix_string += "_selected";
     char* suffix = (char*)suffix_string.c_str();
+
+    std::string out_file_name= "muon"+suffix_string+".root";
 
     // Read WCSim flles
     TChain *t = new TChain("wcsimT");
@@ -84,7 +86,7 @@ void AnalyzeCosmics(
         pmt_posT[i] = pmtpos;
     }
 
-    ifstream maskFile(maks_file_name);
+    ifstream maskFile(mask_file_name);
     int cab_id;
     std::vector<bool> mask_list(nPMTs,false);
     while (maskFile >> cab_id)
@@ -93,6 +95,25 @@ void AnalyzeCosmics(
         // std::cout<<"cab_id "<<cab_id<<" is masked\n";
     }
 
+    TFile* fout = new TFile(out_file_name.c_str(),"RECREATE");
+    TTree* tout = new TTree("muon", "Selected muon tracks and PMT hits");
+    float vertex[4], direction[3], momentum, mu_e_llh, entrance_pos[4], exit_pos[4], mu_nll;
+    float truth_entrance_pos[4], truth_exit_pos[4];
+    std::vector<int> pmt_id;
+    std::vector<float> pmt_Q;
+    std::vector<double> pmt_T;
+    tout->Branch("vertex",&vertex,"vertex[4]/F"); // (x,y,z,t)
+    tout->Branch("direction",&direction,"direction[3]/F");
+    tout->Branch("momentum",&momentum);
+    tout->Branch("mu_e_llh",&mu_e_llh); // ln(likelihood_mu/likelihood_e)
+    tout->Branch("mu_nll",&mu_nll); // -ln(likelihood_mu)
+    tout->Branch("entrance_pos",&entrance_pos,"entrance_pos[4]/F");
+    tout->Branch("exit_pos",&exit_pos,"exit_pos[4]/F");
+    tout->Branch("truth_entrance_pos",&truth_entrance_pos,"truth_entrance_pos[4]/F");
+    tout->Branch("truth_exit_pos",&truth_exit_pos,"truth_exit_pos[4]/F");
+    tout->Branch("pmt_id",&pmt_id);
+    tout->Branch("pmt_Q",&pmt_Q);
+    tout->Branch("pmt_T",&pmt_T);
 
     TH1D* hist_top = new TH1D("hist_top","hist_top",100,0,1);
     TH1D* hist_barrel = new TH1D("hist_barrel","hist_barrel",100,0,1);
@@ -147,6 +168,7 @@ void AnalyzeCosmics(
         double dirz = -999;
         double displayTopX,displayTopY,displayBotX,displayBotY;
         TVector3 entrance_truth, exit_truth, dir_truth;
+        double entrance_time, exit_time;
 
         // Truth info from MC
         if (isMC)
@@ -159,11 +181,13 @@ void AnalyzeCosmics(
                     dirz = -trk->GetDir(1);
 
                     std::vector<std::vector<float>> bp = trk->GetBoundaryPoints();
+                    std::vector<double> bTimes = trk->GetBoundaryTimes();
                     std::vector<int> bt = trk->GetBoundaryTypes();
                     int last_idx = bp.size()-1;
                     if (last_idx<0) break; // muon does not enter the ID
                     bool topcap = false;
                     TVector3 topPt(bp[0][2]/10.,-bp[0][0]/10.,bp[0][1]/10.);
+                    entrance_time = bTimes[0];
                     displayTopX = -topPt.y();
                     displayTopY = max_z+max_r-topPt.x();
                     if (bt[0]==1 && topPt.z()>max_z) topcap=true; // enter through top cap blacksheet
@@ -176,6 +200,7 @@ void AnalyzeCosmics(
                     }
                     entrance_truth = topPt;
                     TVector3 botPt(bp[last_idx][2]/10.,-bp[last_idx][0]/10.,bp[last_idx][1]/10.);
+                    exit_time = bTimes[last_idx];
                     displayBotX = -botPt.y();
                     displayBotY = -max_z-max_r+botPt.x();
                     bool botcap = false;
@@ -192,6 +217,9 @@ void AnalyzeCosmics(
                     dir_truth = (exit_truth-entrance_truth).Unit();
 
                     if (topcap && botcap) topdown=true;
+
+                    truth_entrance_pos[0] = bp[0][0]/10.; truth_entrance_pos[1] = bp[0][1]/10.; truth_entrance_pos[2] = bp[0][2]/10.; truth_entrance_pos[3] = entrance_time;
+                    truth_exit_pos[0] = bp[last_idx][0]/10.; truth_exit_pos[1] = bp[last_idx][1]/10.; truth_exit_pos[2] = bp[last_idx][2]/10.; truth_exit_pos[3] = exit_time;
 
                     // if (topdown) std::cout<<bp[0][0]<<" "<<bp[0][1]<<" "<<bp[0][2]<<" "<<bp[last_idx][0]<<" "<<bp[last_idx][1]<<" "<<bp[last_idx][2]<<"\n";
                     break;
@@ -242,12 +270,26 @@ void AnalyzeCosmics(
             displayBotYFQ = -max_z-max_r+botPt.x();
         }
 
+        double vg = 2.20027795333758801e8*100/1.e9; // rough speed of light in water in cm/ns
+        double vg_mu = 29.9792458; // speed of light ~ muon
+
+        vertex[0] = fq1rpos[0][2][0]; vertex[1] = fq1rpos[0][2][1]; vertex[2] = fq1rpos[0][2][2]; vertex[3] = fq1rt0[0][2];
+        direction[0] = fq1rdir[0][2][0]; direction[1] = fq1rdir[0][2][1]; direction[2] = fq1rdir[0][2][2];
+        momentum = fq1rmom[0][2];
+        mu_e_llh = fq1rnll[0][1]-fq1rnll[0][2];
+        mu_nll = fq1rnll[0][2];
+        entrance_pos[0] = -topPt.y(); entrance_pos[1] = topPt.z(); entrance_pos[2] = topPt.x(); 
+        entrance_pos[3] = fq1rt0[0][2] + (max_z-fqVtx.z())/fqDir.z()/vg_mu;
+        exit_pos[0] = -botPt.y(); exit_pos[1] = botPt.z(); exit_pos[2] = botPt.x(); 
+        exit_pos[3] = fq1rt0[0][2] + (-max_z-fqVtx.z())/fqDir.z()/vg_mu;
+
         // Hit info
         int nhits = 0;
         double totQ = 0;
         std::vector<double> pmt_hit(3,0.);
         std::vector<double> tof_corrected_time;
         std::vector<double> pmt_charge;
+        pmt_id.clear(); pmt_Q.clear(); pmt_T.clear();
         for (int i=0; i< wcsimrootevent->GetNcherenkovdigihits() ; i++)
         {
             WCSimRootCherenkovDigiHit* wcsimrootcherenkovdigihit = (WCSimRootCherenkovDigiHit*) (wcsimrootevent->GetCherenkovDigiHits())->At(i);
@@ -265,15 +307,16 @@ void AnalyzeCosmics(
             pmt_hit[cycloc] += peForTube;
             nhits++;
             totQ += peForTube;
-
-            double vg = 2.20027795333758801e8*100/1.e9; // rough speed of light in water in cm/ns
-            double vg_mu = 30; // rough speed of light in water in cm/ns
             // Residual time
-            time -= fq1rt0[0][2] + (max_z-fqVtx.z())/fqDir.z()/vg_mu // fitted entrance time
+            time -= entrance_pos[3] // fitted entrance time
                     + (pmt_posT[tubeNumber]-TVector3(fq1rpos[0][2][0],fq1rpos[0][2][1],fq1rpos[0][2][2])).Mag()/vg; // photon time of flight from entrance point
             
             tof_corrected_time.push_back(time);
             pmt_charge.push_back(peForTube);
+
+            pmt_id.push_back(tubeNumber);
+            pmt_Q.push_back(peForTube);
+            pmt_T.push_back(wcsimrootcherenkovdigihit->GetT());
         }
 
         // selection based on observables
@@ -326,6 +369,8 @@ void AnalyzeCosmics(
 
         count_selected++;
         if (topdown) count_topdown++;
+
+        tout->Fill();
     }
 
     std::cout<<"Number of selected muons = "<<count_selected<<std::endl;
@@ -432,4 +477,8 @@ void AnalyzeCosmics(
     gPad->SaveAs(Form("fig/fq_nll%s.pdf",suffix));
     hist_fq_hit_time->Draw("hist");
     gPad->SaveAs(Form("fig/fq_tof%s.pdf",suffix));
+
+    fout->cd();
+    tout->Write();
+    fout->Close();
 }
