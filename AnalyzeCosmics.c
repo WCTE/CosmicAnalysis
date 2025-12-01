@@ -299,7 +299,7 @@ void AnalyzeCosmics(
 
             if (mask_list[tubeNumber]) continue; // remove masked PMTs
             if (time-fq1rt0[0][2]>50) continue; // remove late hits
-            //if (peForTube>30) continue;
+            if (peForTube>30) continue;
 
             hist_pe->Fill(peForTube);
 
