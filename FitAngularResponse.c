@@ -288,6 +288,8 @@ void FitAngularResponse()
     TFile* fMC = new TFile("angular_MC.root");
     TFile* fData = new TFile("angular_1766.root");
 
+    TFile* fout = new TFile("wcte_angular_eff.root","RECREATE");
+
     gStyle->SetOptStat(0);
     std::vector<TH1D*> hNominal(4);
     std::vector<TH1D*> hMC(4);
@@ -346,26 +348,78 @@ void FitAngularResponse()
             int mpmt_type_id = mpmt_type[j];
             if (mpmt_type_id==i)
             {
-                TH1D* hData = (TH1D*)fData->Get(Form("hist_QR_Costh_1D_Slot_%i",j));
-                if (hData->GetMaximum()<10) continue;
-                hData->GetYaxis()->SetRangeUser(low,high);
-                hData->SetLineColor(kBlack);
-                if (hData->GetBinContent(11)<600 && i!=0) 
+                TH1D* hSlotData = (TH1D*)fData->Get(Form("hist_QR_Costh_1D_Slot_%i",j));
+                if (hSlotData->GetMaximum()<10) continue;
+                hSlotData->GetYaxis()->SetRangeUser(low,high);
+                hSlotData->SetLineColor(kBlack);
+                if (hSlotData->GetBinContent(11)<600 && i!=0) 
                 {
-                    hData->SetLineColor(color_count++);
-                    hData->SetLineWidth(3);
-                    legend->AddEntry(hData,Form("Slot_%i",j),"l");
+                    hSlotData->SetLineColor(color_count++);
+                    hSlotData->SetLineWidth(3);
+                    legend->AddEntry(hSlotData,Form("Slot_%i",j),"l");
                 }
                 if (firstData) 
                 {
-                    hData->SetTitle(Form("QR_Costh_1D_Data_%s.pdf",mpmt_type_string[i].c_str()));
-                    hData->Draw("hist");
+                    hSlotData->SetTitle(Form("QR_Costh_1D_Data_%s.pdf",mpmt_type_string[i].c_str()));
+                    hSlotData->Draw("hist");
                     firstData = false;
                 }
-                else hData->Draw("hist same");
+                else hSlotData->Draw("hist same");
             }
         }
         legend->Draw();
         gPad->SaveAs(Form("QR_Costh_1D_Data_%s.pdf",mpmt_type_string[i].c_str()));
     }
+
+    for (int i=0;i<106;i++)
+    {
+        TGraph* g;
+        int mpmt_type_id = mpmt_type[i];
+
+        if (mpmt_type_id==-1)
+        {
+            // flat efficiency for empty mPMT slot
+            g = new TGraph(2);
+            g->SetPoint(0, -1, 1);
+            g->SetPoint(1,  1, 1);
+        }
+        else
+        {
+            TH1D* hSlotData = (TH1D*)fData->Get(Form("hist_QR_Costh_1D_Slot_%i",i));
+            if (hSlotData->GetMaximum()<10)
+            {
+                // use category efficiency if no individual slot data
+                int n = hData[mpmt_type_id]->GetNbinsX();
+                g = new TGraph(n+2);
+                g->SetPoint(0, -1, hData[mpmt_type_id]->GetBinContent(1));
+                for (int j = 1; j <= n; j++) 
+                {
+                    double x  = hData[mpmt_type_id]->GetBinCenter(j);
+                    double y  = hData[mpmt_type_id]->GetBinContent(j);
+                    g->SetPoint(j, x, y);
+                }
+                g->SetPoint(n+1, 1, hData[mpmt_type_id]->GetBinContent(n));
+            }
+            else
+            {
+                // individual slot efficiency
+                TH1D* hSlotNominal = (TH1D*)fNominal->Get(Form("hist_QR_Costh_1D_Slot_%i",i));
+                int n = hSlotData->GetNbinsX();
+                g = new TGraph(n+2);
+                g->SetPoint(0, -1, hSlotData->GetBinContent(1)/hSlotNominal->GetBinContent(1));
+                for (int j = 1; j <= n; j++) 
+                {
+                    double x  = hSlotData->GetBinCenter(j);
+                    double y  = hSlotData->GetBinContent(j)/hSlotNominal->GetBinContent(j);
+                    g->SetPoint(j, x, y);
+                }
+                g->SetPoint(n+1, 1, hSlotData->GetBinContent(n)/hSlotNominal->GetBinContent(n));
+            }
+        }
+
+        fout->cd();
+        g->Write(Form("mPMT%i",i));
+    }
+
+    fout->Close();
 }
