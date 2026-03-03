@@ -36,7 +36,7 @@ Then we derive a set of selection cuts:
 
 To further improve selection purity, the fiTQun reconstructed vertex and direction are extrapolated to find the muon entrance and exit positions at the tank surface. Then we only keep muons with:
 - reconstructed entrance point on the top cap
-- reconstructed exit point on the top cap
+- reconstructed exit point on the bottom cap
 
 After the selection, 25% of all the muons remain. The selection efficiency and purity of top-down events are 68% and 79% respectively. Meanwhile over 95% of the selected events are with truth `cos(zenith_angle)>0.7`.
 
