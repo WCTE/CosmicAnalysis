@@ -1,5 +1,5 @@
 # ComsicAnalysis
-ROOT-based analysis to study cosmic muons.
+ROOT-based analysis to study cosmic muons. Summary slides are available at [here](doc/wcte_cosmic_analysis.pdf).
 
 ## MC
 A through-going cosmic muon sample is stored at `/eos/experiment/wcte/MC_Production/v1.4.1/cosmics/`. The production and analysis environment can be accessed by
